@@ -4,4 +4,9 @@ run:
 
 .PHONY: test
 test:
-	GOFLAGS="-count=1" go test -v -cover -race ./...
+	go test -v -race -buildvcs ./...
+	
+.PHONY: test/cover
+test/cover:
+	go test -v -race -buildvcs -coverprofile=/tmp/coverage.out ./... 
+	go tool cover -html=/tmp/coverage.out
