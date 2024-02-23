@@ -16,13 +16,21 @@ func TestCreateUser(t *testing.T) {
 	}
 
 	// Act
-	user, err := store.CreateUser(user)
+	createdUser, err := store.CreateUser(user)
 	if err != nil {
 		t.Fatal()
 	}
 
 	// Assert
-	if user.ID == 0 {
-		t.Errorf("id must not be zero")
+	if createdUser.ID == 0 {
+		t.Error("id must not be zero")
+	}
+
+	if createdUser.Name != user.Name {
+		t.Errorf("Expected: %s, Actual: %s", user.Name, createdUser.Name)
+	}
+
+	if createdUser.Password == user.Password {
+		t.Error("password must be hashed")
 	}
 }
