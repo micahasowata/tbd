@@ -2,17 +2,19 @@ package pg
 
 import (
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/utils"
 	"github.com/rs/xid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCreateUser(t *testing.T) {
-	// Arrange
+func setUpUser(t *testing.T) (*PGStore, *domain.User) {
+	t.Helper()
+
 	db, err := store.NewTestDB()
 	if err != nil {
 		t.Fatal(err)
@@ -40,71 +42,36 @@ func TestCreateUser(t *testing.T) {
 		Email:    input.Email,
 		Password: hash,
 	}
-	// Act
-	user, err = store.CreateUser(user)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	// Assert
-	if user.ID == 0 {
-		t.Error("id must not be zero")
-	}
-
-	if user.Name != input.Name {
-		t.Errorf("expected: %s, actual: %s", input.Name, user.Name)
-	}
-
-	if !slices.Equal[[]byte](user.Password, hash) {
-		t.Errorf("password hash must be hashed")
-	}
-
-	// Attempt to create user with same details, which violates the
-	// unique constraint on the `email` field of the users table
-	_, err = store.CreateUser(user)
-	if err == nil {
-		t.Fatal("expected error got nil")
-	}
+	return store, user
 }
 
-// func TestDeleteUser(t *testing.T) {
-// 	// Arrange
-// 	db, err := store.NewTestDB()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+func TestCreateUser(t *testing.T) {
+	s, u := setUpUser(t)
 
-// 	store := NewPGStore(db)
+	t.Run("valid", func(t *testing.T) {
+		user, err := s.CreateUser(u)
+		require.Nil(t, err)
 
-// 	input := struct {
-// 		Name     string
-// 		Email    string
-// 		Password string
-// 	}{
-// 		Name:     "John Doe",
-// 		Email:    fmt.Sprintf("test-%s@test.com", xid.New().String()),
-// 		Password: "password",
-// 	}
+		assert.Equal(t, u.Name, user.Name)
+		assert.Equal(t, u.Password, user.Password)
+	})
 
-// 	hash, err := utils.HashPassword(input.Password)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	t.Run("invalid", func(t *testing.T) {
+		user, err := s.CreateUser(u)
+		require.NotNil(t, err)
+		assert.Nil(t, user)
+		assert.ErrorContains(t, err, "pq: duplicate key value violates unique constraint")
+	})
 
-// 	user := &domain.User{
-// 		Name:     input.Name,
-// 		Email:    input.Email,
-// 		Password: hash,
-// 	}
+}
 
-// 	user, err = store.CreateUser(user)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+func TestDeleteUser(t *testing.T) {
+	s, u := setUpUser(t)
+	user, err := s.CreateUser(u)
+	require.Nil(t, err)
 
-// 	//Act
-// 	err = store.DeleteUser(user.ID)
-// 	if err != nil {
-// 		t.Errorf("Expected nil, got %q", err)
-// 	}
-// }
+	err = s.DeleteUser(user.ID)
+	require.Nil(t, err)
+
+}
