@@ -8,7 +8,7 @@ import (
 
 func TestCreateUser(t *testing.T) {
 	// Arrange
-	store := NewPGStore(nil)
+	store := NewPGStore(tdb)
 	user := &domain.User{
 		Email:    "test@test.com",
 		Password: "password",
