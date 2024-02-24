@@ -1,10 +1,14 @@
 package pg
 
 import (
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/store"
+	"github.com/micahasowata/tbd/pkg/utils"
+	"github.com/rs/xid"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -16,28 +20,42 @@ func TestCreateUser(t *testing.T) {
 
 	store := NewPGStore(db)
 
-	user := &domain.User{
-		Email:    "test@test.com",
-		Password: "password",
+	input := struct {
+		Name     string
+		Email    string
+		Password string
+	}{
 		Name:     "John Doe",
+		Email:    fmt.Sprintf("test-%s@test.com", xid.New().String()),
+		Password: "password",
 	}
 
+	hash, err := utils.HashPassword(input.Password)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	user := &domain.User{
+		Name:     input.Name,
+		Email:    input.Email,
+		Password: hash,
+	}
 	// Act
-	createdUser, err := store.CreateUser(user)
+	user, err = store.CreateUser(user)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Assert
-	if createdUser.ID == 0 {
+	if user.ID == 0 {
 		t.Error("id must not be zero")
 	}
 
-	if createdUser.Name != user.Name {
-		t.Errorf("Expected: %s, Actual: %s", user.Name, createdUser.Name)
+	if user.Name != input.Name {
+		t.Errorf("Expected: %s, Actual: %s", input.Name, user.Name)
 	}
 
-	if createdUser.Password != user.Password {
+	if !slices.Equal[[]byte](user.Password, hash) {
 		t.Errorf("password hash must be hashed")
 	}
 }
