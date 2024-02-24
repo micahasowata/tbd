@@ -4,11 +4,18 @@ import (
 	"testing"
 
 	"github.com/micahasowata/tbd/pkg/domain"
+	"github.com/micahasowata/tbd/pkg/store"
 )
 
 func TestCreateUser(t *testing.T) {
 	// Arrange
-	store := NewPGStore(tdb)
+	db, err := store.NewTestDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := NewPGStore(db)
+
 	user := &domain.User{
 		Email:    "test@test.com",
 		Password: "password",
@@ -18,7 +25,7 @@ func TestCreateUser(t *testing.T) {
 	// Act
 	createdUser, err := store.CreateUser(user)
 	if err != nil {
-		t.Fatal()
+		t.Fatal(err)
 	}
 
 	// Assert
@@ -30,7 +37,7 @@ func TestCreateUser(t *testing.T) {
 		t.Errorf("Expected: %s, Actual: %s", user.Name, createdUser.Name)
 	}
 
-	if createdUser.Password == user.Password {
-		t.Error("password must be hashed")
+	if createdUser.Password != user.Password {
+		t.Errorf("password hash must be hashed")
 	}
 }
