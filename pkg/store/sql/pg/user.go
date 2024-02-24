@@ -25,3 +25,16 @@ func (s *PGStore) CreateUser(user *domain.User) (*domain.User, error) {
 
 	return user, nil
 }
+
+func (s *PGStore) DeleteUser(id int) error {
+	query := `
+	DELETE FROM users
+	WHERE id = $1`
+
+	_, err := s.db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
