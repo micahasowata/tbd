@@ -24,3 +24,8 @@ func New(dsn string) (*sql.DB, error) {
 
 	return db, nil
 }
+
+func NewTestDB() (*sql.DB, error) {
+	dsn := "postgres://possible_bed_test:q9AfytisL1xey@localhost:4500/careful_soup_test?sslmode=disable"
+	return New(dsn)
+}
