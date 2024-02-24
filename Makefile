@@ -1,3 +1,5 @@
+include .envrc
+
 .PHONY: run
 run:
 	go run ./cmd/api
@@ -10,3 +12,27 @@ test:
 test/cover:
 	go test -v -race -buildvcs -coverprofile=/tmp/coverage.out ./... 
 	go tool cover -html=/tmp/coverage.out
+.PHONY: db
+db:
+	echo ${DB_DSN}
+
+.PHONY: db/migrations/new
+db/migrations/new:
+	migrate create -seq -ext .sql -dir migrations ${name}
+
+.PHONY: db/migrations/up
+db/migrations/up:
+	migrate -path migrations -database ${DB_DSN} up
+
+.PHONY: db/migrations/down 
+db/migrations/down:
+	migrate -path migrations -database ${DB_DSN} down
+
+.PHONY: db/migrations/force 
+db/migrations/force:
+	migrate -path migrations -database ${DB_DSN} force ${v}
+
+.PHONY: db/migrations/drop 
+db/migrations/drop:
+	migrate -path migrations -database ${DB_DSN} drop
+
