@@ -1,6 +1,6 @@
 package domain
 
 type Store interface {
-	CreateUser(user *User) (*User, error)
-	DeleteUser(id int) error
+	CreateUser(*User) (*User, error)
+	DeleteUser(int) error
 }
