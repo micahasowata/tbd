@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/micahasowata/jason"
+	"github.com/micahasowata/tbd/pkg/domain"
+	"github.com/micahasowata/tbd/pkg/utils"
 )
 
 func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
@@ -24,5 +26,26 @@ func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
 		s.Write(w, http.StatusUnprocessableEntity, jason.Envelope{"error": err.Error()}, nil)
 		return
 	}
-	s.Write(w, http.StatusOK, jason.Envelope{"user": input}, nil)
+
+	hash, err := utils.HashPassword(input.Password)
+	if err != nil {
+		s.logger.Error(err.Error())
+		s.Write(w, http.StatusInternalServerError, jason.Envelope{"error": "could not process request"}, nil)
+		return
+	}
+
+	user := &domain.User{
+		Name:     input.Name,
+		Email:    input.Email,
+		Password: hash,
+	}
+
+	user, err = s.store.CreateUser(user)
+	if err != nil {
+		s.logger.Error(err.Error())
+		s.Write(w, http.StatusInternalServerError, jason.Envelope{"error": "could not process request"}, nil)
+		return
+	}
+
+	s.Write(w, http.StatusOK, jason.Envelope{"user": user}, nil)
 }
