@@ -1,13 +1,12 @@
 package pg
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/utils"
-	"github.com/rs/xid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,9 +26,9 @@ func setUpUser(t *testing.T) (*PGStore, *domain.User) {
 		Email    string
 		Password string
 	}{
-		Name:     "John Doe",
-		Email:    fmt.Sprintf("test-%s@test.com", xid.New().String()),
-		Password: "password",
+		Name:     gofakeit.Name(),
+		Email:    gofakeit.Email(),
+		Password: gofakeit.Password(true, true, true, false, false, 14),
 	}
 
 	hash, err := utils.HashPassword(input.Password)
