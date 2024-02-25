@@ -16,10 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateUser(t *testing.T) {
-	body := fmt.Sprintf(`{"name":%s, "email":%s, "password":%s}`,
-		gofakeit.Name(), gofakeit.Email(), gofakeit.Password(true, true, true, false, false, 14))
-
+func setUpTest(t *testing.T) (*server, *httptest.Server) {
 	db, err := store.NewTestDB()
 	require.Nil(t, err)
 
@@ -29,6 +26,15 @@ func TestCreateUser(t *testing.T) {
 	}
 
 	ts := httptest.NewServer(srv.routes())
+
+	return srv, ts
+}
+
+func TestCreateUser(t *testing.T) {
+	body := fmt.Sprintf(`{"name":%s, "email":%s, "password":%s}`,
+		gofakeit.Name(), gofakeit.Email(), gofakeit.Password(true, true, true, false, false, 14))
+
+	srv, ts := setUpTest(t)
 	defer ts.Close()
 
 	res, err := ts.Client().Post(ts.URL+"/v1/users/create", jason.ContentTypeJSON, strings.NewReader(body))
