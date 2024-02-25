@@ -114,3 +114,10 @@ func (s *PGStore) DeleteUser(id int) error {
 
 	return nil
 }
+
+func (s *PGStore) DeleteAllUsers() error {
+	query := `DELETE FROM users`
+
+	_, err := s.db.Exec(query)
+	return err
+}
