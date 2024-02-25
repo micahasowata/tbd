@@ -52,6 +52,11 @@ func TestCreateUser(t *testing.T) {
 			body: `{"name": "tbd","email": "metbd.com"}`,
 			code: http.StatusUnprocessableEntity,
 		},
+		{
+			name: "duplicate data",
+			body: `{"name": "tbd", "email":"me@tbd.com", "password":"://me@tbd.com://"}`,
+			code: http.StatusInternalServerError,
+		},
 	}
 
 	for _, tt := range tests {
