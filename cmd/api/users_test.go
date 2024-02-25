@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/micahasowata/jason"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/store/sql/pg"
@@ -19,9 +20,10 @@ func setUpTest(t *testing.T) *httptest.Server {
 	require.Nil(t, err)
 
 	srv := &server{
-		Jason:  jason.New(100, false, true),
-		logger: slog.Default(),
-		store:  pg.New(db),
+		Jason:    jason.New(100, false, true),
+		logger:   slog.Default(),
+		validate: validator.New(validator.WithRequiredStructEnabled()),
+		store:    pg.New(db),
 	}
 
 	ts := httptest.NewServer(srv.routes())
@@ -44,6 +46,11 @@ func TestCreateUser(t *testing.T) {
 			name: "bad request body",
 			body: `{"name": "}`,
 			code: http.StatusBadRequest,
+		},
+		{
+			name: "invalid data",
+			body: `{"name": "tbd","email": "metbd.com"}`,
+			code: http.StatusUnprocessableEntity,
 		},
 	}
 
