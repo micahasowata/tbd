@@ -86,7 +86,7 @@ func TestDeleteUser(t *testing.T) {
 
 }
 
-func TestFindUserByEmail(t *testing.T) {
+func TestGetUserByEmail(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		s, u := setUpUser(t)
 		user, err := s.CreateUser(u)
