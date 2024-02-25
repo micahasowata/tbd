@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setUpTest(t *testing.T) *httptest.Server {
+func setUpTest(t *testing.T) (*server, *httptest.Server) {
 	db, err := store.NewTestDB()
 	require.Nil(t, err)
 
@@ -28,7 +28,7 @@ func setUpTest(t *testing.T) *httptest.Server {
 
 	ts := httptest.NewServer(srv.routes())
 
-	return ts
+	return srv, ts
 }
 
 func TestCreateUser(t *testing.T) {
@@ -59,10 +59,11 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
+	srv, ts := setUpTest(t)
+	defer ts.Close()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts := setUpTest(t)
-			defer ts.Close()
 
 			res, err := ts.Client().Post(ts.URL+"/v1/users/create", jason.ContentTypeJSON, strings.NewReader(tt.body))
 			require.Nil(t, err)
@@ -70,4 +71,6 @@ func TestCreateUser(t *testing.T) {
 			assert.Equal(t, tt.code, res.StatusCode)
 		})
 	}
+
+	srv.store.DeleteAllUsers()
 }
