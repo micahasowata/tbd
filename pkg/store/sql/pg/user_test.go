@@ -47,7 +47,7 @@ func setUpUser(t *testing.T) (*PGStore, *domain.User) {
 
 func TestCreateUser(t *testing.T) {
 	s, u := setUpUser(t)
-
+	defer s.DeleteAllUsers()
 	t.Run("valid", func(t *testing.T) {
 		user, err := s.CreateUser(u)
 		require.Nil(t, err)
@@ -68,6 +68,7 @@ func TestCreateUser(t *testing.T) {
 
 func TestDeleteUser(t *testing.T) {
 	s, u := setUpUser(t)
+	defer s.DeleteAllUsers()
 	t.Run("valid", func(t *testing.T) {
 		user, err := s.CreateUser(u)
 		require.Nil(t, err)
@@ -88,6 +89,8 @@ func TestDeleteUser(t *testing.T) {
 func TestGetUserByEmail(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		s, u := setUpUser(t)
+		defer s.DeleteAllUsers()
+
 		user, err := s.CreateUser(u)
 		require.Nil(t, err)
 
@@ -114,6 +117,8 @@ func TestGetUserByID(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		s, u := setUpUser(t)
 		user, err := s.CreateUser(u)
+		defer s.DeleteAllUsers()
+
 		require.Nil(t, err)
 
 		u, err = s.GetUserByID(user.ID)
@@ -133,4 +138,17 @@ func TestGetUserByID(t *testing.T) {
 		require.Nil(t, user)
 
 	})
+}
+
+func TestDeleteAllUsers(t *testing.T) {
+	s, u := setUpUser(t)
+	user, err := s.CreateUser(u)
+	require.Nil(t, err)
+
+	err = s.DeleteAllUsers()
+	require.Nil(t, err)
+
+	user, err = s.GetUserByEmail(user.Email)
+	require.NotNil(t, err)
+	require.Nil(t, user)
 }
