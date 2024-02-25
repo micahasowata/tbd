@@ -19,6 +19,7 @@ func setUpTest(t *testing.T) *httptest.Server {
 	require.Nil(t, err)
 
 	srv := &server{
+		Jason:  jason.New(100, false, true),
 		logger: slog.Default(),
 		store:  pg.New(db),
 	}
@@ -41,7 +42,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			name: "bad request body",
-			body: `{"name": "tbd`,
+			body: `{"name": "}`,
 			code: http.StatusBadRequest,
 		},
 	}
