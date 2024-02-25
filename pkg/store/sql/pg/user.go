@@ -67,6 +67,32 @@ func (s *PGStore) GetUserByEmail(email string) (*domain.User, error) {
 	return user, nil
 }
 
+func (s *PGStore) GetUserByID(id int) (*domain.User, error) {
+	query := `SELECT id, name, email, password
+	FROM users
+	WHERE id = $1`
+
+	user := &domain.User{}
+
+	err := s.db.QueryRow(query, id).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Password,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrUserNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
+
 func (s *PGStore) DeleteUser(id int) error {
 	query := `
 	DELETE FROM users
