@@ -6,11 +6,14 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/store"
+	"github.com/micahasowata/tbd/pkg/store/sql/pg"
 )
 
 type server struct {
 	logger *slog.Logger
+	store  domain.Store
 }
 
 func main() {
@@ -31,6 +34,7 @@ func main() {
 
 	s := &server{
 		logger: logger,
+		store:  pg.New(db),
 	}
 
 	srv := &http.Server{
