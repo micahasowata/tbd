@@ -3,51 +3,12 @@ package pg
 import (
 	"testing"
 
-	"github.com/brianvoe/gofakeit/v7"
-	"github.com/micahasowata/tbd/pkg/domain"
-	"github.com/micahasowata/tbd/pkg/store"
-	"github.com/micahasowata/tbd/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setUpUser(t *testing.T) (*PGStore, *domain.User) {
-	t.Helper()
-
-	db, err := store.NewTestDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	store := New(db)
-
-	input := struct {
-		Name     string
-		Email    string
-		Password string
-	}{
-		Name:     gofakeit.Name(),
-		Email:    gofakeit.Email(),
-		Password: gofakeit.Password(true, true, true, false, false, 14),
-	}
-
-	hash, err := utils.HashPassword(input.Password)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	user := &domain.User{
-		Name:     input.Name,
-		Email:    input.Email,
-		Password: hash,
-	}
-
-	return store, user
-}
-
 func TestCreateUser(t *testing.T) {
-	s, u := setUpUser(t)
-	defer s.DeleteAllUsers()
+	s, u := setUpUser()
 	t.Run("valid", func(t *testing.T) {
 		user, err := s.CreateUser(u)
 		require.Nil(t, err)
@@ -67,8 +28,7 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	s, u := setUpUser(t)
-	defer s.DeleteAllUsers()
+	s, u := setUpUser()
 	t.Run("valid", func(t *testing.T) {
 		user, err := s.CreateUser(u)
 		require.Nil(t, err)
@@ -88,8 +48,7 @@ func TestDeleteUser(t *testing.T) {
 
 func TestGetUserByEmail(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		s, u := setUpUser(t)
-		defer s.DeleteAllUsers()
+		s, u := setUpUser()
 
 		user, err := s.CreateUser(u)
 		require.Nil(t, err)
@@ -104,7 +63,7 @@ func TestGetUserByEmail(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		s, u := setUpUser(t)
+		s, u := setUpUser()
 
 		user, err := s.GetUserByEmail(u.Email)
 		require.NotNil(t, err)
@@ -115,9 +74,8 @@ func TestGetUserByEmail(t *testing.T) {
 
 func TestGetUserByID(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		s, u := setUpUser(t)
+		s, u := setUpUser()
 		user, err := s.CreateUser(u)
-		defer s.DeleteAllUsers()
 
 		require.Nil(t, err)
 
@@ -131,7 +89,7 @@ func TestGetUserByID(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		s, u := setUpUser(t)
+		s, u := setUpUser()
 
 		user, err := s.GetUserByID(u.ID)
 		require.NotNil(t, err)
@@ -141,7 +99,7 @@ func TestGetUserByID(t *testing.T) {
 }
 
 func TestDeleteAllUsers(t *testing.T) {
-	s, u := setUpUser(t)
+	s, u := setUpUser()
 	user, err := s.CreateUser(u)
 	require.Nil(t, err)
 

@@ -1,35 +1,14 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/micahasowata/jason"
-	"github.com/micahasowata/tbd/pkg/store"
-	"github.com/micahasowata/tbd/pkg/store/sql/pg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func setUpTest(t *testing.T) (*server, *httptest.Server) {
-	db, err := store.NewTestDB()
-	require.Nil(t, err)
-
-	srv := &server{
-		Jason:    jason.New(100, false, true),
-		logger:   slog.Default(),
-		validate: validator.New(validator.WithRequiredStructEnabled()),
-		store:    pg.New(db),
-	}
-
-	ts := httptest.NewServer(srv.routes())
-
-	return srv, ts
-}
 
 func TestCreateUser(t *testing.T) {
 	tests := []struct {
@@ -59,7 +38,7 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
-	srv, ts := setUpTest(t)
+	_, ts := setUpTest()
 	defer ts.Close()
 
 	for _, tt := range tests {
@@ -71,6 +50,4 @@ func TestCreateUser(t *testing.T) {
 			assert.Equal(t, tt.code, res.StatusCode)
 		})
 	}
-
-	srv.store.DeleteAllUsers()
 }
