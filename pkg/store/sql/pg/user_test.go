@@ -110,3 +110,28 @@ func TestGetUserByEmail(t *testing.T) {
 
 	})
 }
+
+func TestGetUserByID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		s, u := setUpUser(t)
+		user, err := s.CreateUser(u)
+		require.Nil(t, err)
+
+		u, err = s.GetUserByID(user.ID)
+		require.Nil(t, err)
+
+		assert.Equal(t, u.ID, user.ID)
+		assert.Equal(t, u.Name, user.Name)
+		assert.Equal(t, u.Email, user.Email)
+		assert.Equal(t, u.Password, user.Password)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		s, u := setUpUser(t)
+
+		user, err := s.GetUserByID(u.ID)
+		require.NotNil(t, err)
+		require.Nil(t, user)
+
+	})
+}
