@@ -12,7 +12,7 @@ type PGStore struct {
 
 var _ domain.Store = (*PGStore)(nil)
 
-func NewPGStore(db *sql.DB) *PGStore {
+func New(db *sql.DB) *PGStore {
 	return &PGStore{
 		db: db,
 	}

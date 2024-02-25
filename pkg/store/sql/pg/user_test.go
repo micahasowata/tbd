@@ -20,7 +20,7 @@ func setUpUser(t *testing.T) (*PGStore, *domain.User) {
 		t.Fatal(err)
 	}
 
-	store := NewPGStore(db)
+	store := New(db)
 
 	input := struct {
 		Name     string
