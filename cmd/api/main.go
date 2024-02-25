@@ -6,12 +6,15 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/micahasowata/jason"
 	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/store/sql/pg"
 )
 
 type server struct {
+	*jason.Jason
+
 	logger *slog.Logger
 	store  domain.Store
 }
@@ -33,6 +36,7 @@ func main() {
 	logger.Info("db connected successfully")
 
 	s := &server{
+		Jason:  jason.New(1_048_576, false, true),
 		logger: logger,
 		store:  pg.New(db),
 	}
