@@ -8,9 +8,9 @@ import (
 
 func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Name     string `json:"name" validate:"required"`
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required,min=8,max=72"`
 	}
 
 	err := s.Read(w, r, &input)
@@ -19,5 +19,10 @@ func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = s.validate.Struct(&input)
+	if err != nil {
+		s.Write(w, http.StatusUnprocessableEntity, jason.Envelope{"error": err.Error()}, nil)
+		return
+	}
 	s.Write(w, http.StatusOK, jason.Envelope{"user": input}, nil)
 }

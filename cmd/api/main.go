@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"github.com/micahasowata/jason"
 	"github.com/micahasowata/tbd/pkg/domain"
@@ -15,8 +16,9 @@ import (
 type server struct {
 	*jason.Jason
 
-	logger *slog.Logger
-	store  domain.Store
+	logger   *slog.Logger
+	validate *validator.Validate
+	store    domain.Store
 }
 
 func main() {
@@ -36,9 +38,10 @@ func main() {
 	logger.Info("db connected successfully")
 
 	s := &server{
-		Jason:  jason.New(1_048_576, false, true),
-		logger: logger,
-		store:  pg.New(db),
+		Jason:    jason.New(1_048_576, false, true),
+		logger:   logger,
+		validate: validator.New(validator.WithRequiredStructEnabled()),
+		store:    pg.New(db),
 	}
 
 	srv := &http.Server{
