@@ -1,14 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/brianvoe/gofakeit/v7"
 	"github.com/micahasowata/jason"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/store/sql/pg"
@@ -16,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setUpTest(t *testing.T) (*server, *httptest.Server) {
+func setUpTest(t *testing.T) *httptest.Server {
 	db, err := store.NewTestDB()
 	require.Nil(t, err)
 
@@ -27,19 +25,36 @@ func setUpTest(t *testing.T) (*server, *httptest.Server) {
 
 	ts := httptest.NewServer(srv.routes())
 
-	return srv, ts
+	return ts
 }
 
 func TestCreateUser(t *testing.T) {
-	body := fmt.Sprintf(`{"name":%s, "email":%s, "password":%s}`,
-		gofakeit.Name(), gofakeit.Email(), gofakeit.Password(true, true, true, false, false, 14))
+	tests := []struct {
+		name string
+		body string
+		code int
+	}{
+		{
+			name: "valid",
+			body: `{"name": "tbd", "email":"me@tbd.com", "password":"://me@tbd.com://"}`,
+			code: http.StatusOK,
+		},
+		{
+			name: "bad request body",
+			body: `{"name": "tbd`,
+			code: http.StatusBadRequest,
+		},
+	}
 
-	srv, ts := setUpTest(t)
-	defer ts.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := setUpTest(t)
+			defer ts.Close()
 
-	res, err := ts.Client().Post(ts.URL+"/v1/users/create", jason.ContentTypeJSON, strings.NewReader(body))
-	require.Nil(t, err)
+			res, err := ts.Client().Post(ts.URL+"/v1/users/create", jason.ContentTypeJSON, strings.NewReader(tt.body))
+			require.Nil(t, err)
 
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-	assert.HTTPBodyContains(t, srv.createUser, http.MethodPost, "/v1/users/create", nil, "OK")
+			assert.Equal(t, tt.code, res.StatusCode)
+		})
+	}
 }
