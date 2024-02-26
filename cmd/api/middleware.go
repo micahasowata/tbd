@@ -14,15 +14,15 @@ func (s *server) authUser(next http.Handler) http.Handler {
 		values := strings.Split(header, " ")
 		if len(values) != 2 || values[0] != "Bearer" {
 			s.Write(w, http.StatusUnauthorized, jason.Envelope{"error": "invalid authorization header"}, nil)
-			next.ServeHTTP(w, r)
 			return
 		}
 
-		claims, err := s.tokens.VerifyJWT([]byte(values[1]))
+		token := []byte(values[1])
+
+		claims, err := s.tokens.VerifyJWT(token)
 		if err != nil {
 			s.logger.Error(err.Error())
 			s.Write(w, http.StatusForbidden, jason.Envelope{"error": "invalid token"}, nil)
-			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -30,7 +30,6 @@ func (s *server) authUser(next http.Handler) http.Handler {
 		if err != nil {
 			s.logger.Error(err.Error())
 			s.Write(w, http.StatusForbidden, jason.Envelope{"error": "token contains invalid data"}, nil)
-			next.ServeHTTP(w, r)
 			return
 		}
 
