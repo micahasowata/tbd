@@ -1,7 +1,14 @@
 package pg
 
 import (
+	"database/sql"
+	"errors"
+
 	"github.com/micahasowata/tbd/pkg/domain"
+)
+
+var (
+	ErrPostNotFound = errors.New("post not found")
 )
 
 func (s *PGStore) CreatePost(post *domain.Post) (*domain.Post, error) {
@@ -77,6 +84,31 @@ func (s *PGStore) DeletePost(post *domain.Post) error {
 	return err
 }
 
-func (s *PGStore) GetPost(id int) (*domain.Post, error) {
-	return nil, nil
+func (s *PGStore) GetPost(post *domain.Post) (*domain.Post, error) {
+	query := `
+	SELECT id, created_at, user_id, title, body
+	FROM posts
+	WHERE id = $1
+	AND user_id = $2`
+
+	args := []any{post.ID, post.UserID}
+
+	err := s.db.QueryRow(query, args...).Scan(
+		&post.ID,
+		&post.CreatedAt,
+		&post.UserID,
+		&post.Title,
+		&post.Body,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrPostNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return post, nil
 }
