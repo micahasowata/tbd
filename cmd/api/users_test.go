@@ -72,6 +72,26 @@ func TestLoginUser(t *testing.T) {
 			body: `{"email":"j@ohn.com", "password": "happyGoLucky"}`,
 			code: http.StatusOK,
 		},
+		{
+			name: "bad body",
+			body: `{"name":"tbd"}`,
+			code: http.StatusBadRequest,
+		},
+		{
+			name: "bad email",
+			body: `{"email":"john.com", "password": "happyGoLucky"}`,
+			code: http.StatusUnprocessableEntity,
+		},
+		{
+			name: "unknown email",
+			body: `{"email":"ja@nba.com", "password": "happyGoLucky"}`,
+			code: http.StatusForbidden,
+		},
+		{
+			name: "invalid password",
+			body: `{"email":"j@ohn.com", "password": "happyGoLuckyFam"}`,
+			code: http.StatusForbidden,
+		},
 	}
 	_, err := s.store.CreateUser(u)
 	require.Nil(t, err)
