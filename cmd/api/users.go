@@ -82,14 +82,14 @@ func (s *server) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := s.tokens.NewJWT(&domain.Claims{ID: user.ID, Email: user.Email}, 3*time.Hour)
+	token, err := s.tokens.NewJWT(&domain.Claims{ID: user.ID, Email: user.Email}, 3*time.Hour)
 	if err != nil {
 		s.logger.Error(err.Error())
 		s.Write(w, http.StatusInternalServerError, jason.Envelope{"error": "request could not be processed"}, nil)
 		return
 	}
 
-	err = s.Write(w, http.StatusOK, jason.Envelope{"token": t}, nil)
+	err = s.Write(w, http.StatusOK, jason.Envelope{"token": string(token)}, nil)
 	if err != nil {
 		return
 	}
