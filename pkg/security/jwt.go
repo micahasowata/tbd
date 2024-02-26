@@ -2,6 +2,7 @@ package security
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/kataras/jwt"
@@ -12,11 +13,8 @@ var (
 )
 
 type Claims struct {
-	ID       int    `json:"user_id"`
-	Email    string `json:"email"`
-	IssuedAt int64  `json:"issued_at"`
-	Expired  int64  `json:"expired"`
-	Issuer   string `json:"issuer"`
+	ID    int    `json:"user_id"`
+	Email string `json:"email"`
 }
 
 type Token struct {
@@ -31,10 +29,14 @@ func NewToken(key []byte) (*Token, error) {
 	return &Token{Key: key}, nil
 }
 
-func (t *Token) NewJWT(c *Claims, span time.Duration) ([]byte, error) {
-	c.IssuedAt = time.Now().Unix()
-	c.Expired = time.Now().Add(span).Unix()
-	c.Issuer = "tbd"
-
-	return jwt.Sign(jwt.HS256, t.Key, c, jwt.MaxAge(span))
+func (t *Token) NewJWT(claims *Claims, span time.Duration) ([]byte, error) {
+	standardClaims := jwt.Claims{
+		NotBefore: time.Now().Unix(),
+		IssuedAt:  time.Now().Unix(),
+		Expiry:    time.Now().Add(span).Unix(),
+		Issuer:    "tbd",
+		Subject:   fmt.Sprintf("user-%d-%d", claims.ID, time.Now().Unix()),
+		Audience:  jwt.Audience{"tbd-ui"},
+	}
+	return jwt.Sign(jwt.HS256, t.Key, claims, standardClaims, jwt.MaxAge(span))
 }
