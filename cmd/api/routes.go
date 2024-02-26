@@ -12,7 +12,7 @@ func (s *server) routes() http.Handler {
 	router.Post("/v1/users/create", s.createUser)
 	router.Post("/v1/users/login", s.loginUser)
 
-	router.With(s.authUser).Post("/v1/blogs/create", s.createPost)
+	router.With(s.authUser).Post("/v1/posts/create", s.createPost)
 
 	return router
 }
