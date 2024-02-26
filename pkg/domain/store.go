@@ -10,6 +10,11 @@ type Store interface {
 	DeleteAllUsers() error
 	GetUserByEmail(string) (*User, error)
 	GetUserByID(int) (*User, error)
+
+	CreatePost(*Post) (*Post, error)
+	GetUserPosts(int) ([]*Post, error)
+	DeletePost(int) error
+	DeleteAllPosts() error
 }
 
 type JWT interface {
