@@ -40,3 +40,15 @@ func (t *Token) NewJWT(claims *Claims, span time.Duration) ([]byte, error) {
 	}
 	return jwt.Sign(jwt.HS256, t.Key, claims, standardClaims, jwt.MaxAge(span))
 }
+
+func (t *Token) VerifyJWT(token []byte) (*Claims, error) {
+	vt, err := jwt.Verify(jwt.HS256, t.Key, token, jwt.Leeway(2*time.Minute))
+	if err != nil {
+		return nil, err
+	}
+
+	c := &Claims{}
+	vt.Claims(c)
+
+	return c, nil
+}
