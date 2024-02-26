@@ -3,14 +3,14 @@ package main
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/go-chi/chi/v5"
 )
 
 func (s *server) routes() http.Handler {
-	router := httprouter.New()
+	router := chi.NewRouter()
 
-	router.HandlerFunc(http.MethodPost, "/v1/users/create", s.createUser)
-	router.HandlerFunc(http.MethodPost, "/v1/users/login", s.loginUser)
+	router.Post("/v1/users/create", s.createUser)
+	router.Post("/v1/users/login", s.loginUser)
 
 	return router
 }

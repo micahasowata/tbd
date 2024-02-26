@@ -4,10 +4,9 @@ go 1.22.0
 
 require (
 	github.com/brianvoe/gofakeit/v7 v7.0.1
+	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-playground/validator/v10 v10.18.0
 	github.com/joho/godotenv v1.5.1
-	github.com/julienschmidt/httprouter v1.3.0
-	github.com/justinas/alice v1.2.0
 	github.com/kataras/jwt v0.1.12
 	github.com/lib/pq v1.10.9
 	github.com/micahasowata/jason v1.0.1
