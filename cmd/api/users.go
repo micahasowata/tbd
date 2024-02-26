@@ -49,3 +49,7 @@ func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
 
 	s.Write(w, http.StatusOK, jason.Envelope{"user": user}, nil)
 }
+
+func (s *server) loginUser(w http.ResponseWriter, r *http.Request) {
+
+}
