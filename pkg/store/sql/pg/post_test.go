@@ -97,22 +97,41 @@ func TestDeletePost(t *testing.T) {
 
 	err = s.DeletePost(p)
 	require.Nil(t, err)
+
+	p, err = s.GetPost(p)
+	require.NotNil(t, err)
+	require.Nil(t, p)
 }
 
 func TestGetPost(t *testing.T) {
 	s, p := setUpPost()
 
-	p, err := s.CreatePost(p)
-	require.Nil(t, err)
-	require.NotNil(t, p)
+	t.Run("valid", func(t *testing.T) {
+		p, err := s.CreatePost(p)
+		require.Nil(t, err)
+		require.NotNil(t, p)
 
-	cp, err := s.GetPost(p.ID)
-	require.Nil(t, err)
-	require.NotNil(t, cp)
+		cp, err := s.GetPost(p)
+		require.Nil(t, err)
+		require.NotNil(t, cp)
 
-	assert.Equal(t, p.ID, cp.ID)
-	assert.Equal(t, p.UserID, cp.UserID)
-	assert.Equal(t, p.CreatedAt, cp.CreatedAt)
-	assert.Equal(t, p.Title, cp.Title)
-	assert.Equal(t, p.Body, cp.Body)
+		assert.Equal(t, p.ID, cp.ID)
+		assert.Equal(t, p.UserID, cp.UserID)
+		assert.Equal(t, p.CreatedAt, cp.CreatedAt)
+		assert.Equal(t, p.Title, cp.Title)
+		assert.Equal(t, p.Body, cp.Body)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		p, err := s.CreatePost(p)
+		require.Nil(t, err)
+		require.NotNil(t, p)
+
+		err = s.DeletePost(p)
+		require.Nil(t, err)
+
+		cp, err := s.GetPost(p)
+		require.NotNil(t, err)
+		require.Nil(t, cp)
+	})
 }
