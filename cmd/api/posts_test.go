@@ -39,7 +39,10 @@ func TestCreatePost(t *testing.T) {
 			req, err := setUpReq(http.MethodPost, ts.URL+"/v1/posts/create", tt.body)
 			require.Nil(t, err)
 
-			bearer, err := setupAuth(s)
+			user, err := setupUser(s)
+			require.Nil(t, err)
+
+			bearer, err := setupBearer(s.tokens, user)
 			require.Nil(t, err)
 
 			req.Header.Set("Authorization", bearer)
@@ -51,4 +54,10 @@ func TestCreatePost(t *testing.T) {
 			assert.Equal(t, tt.code, res.StatusCode)
 		})
 	}
+}
+
+func TestGetPost(t *testing.T) {
+	// s, ts := setUpTest()
+	// bearer, user, err := setupAuth(s)
+	// require.Nil(t, err)
 }

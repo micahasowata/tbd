@@ -27,10 +27,10 @@ func setUpReq(method, path, body string) (*http.Request, error) {
 	return req, nil
 }
 
-func setupAuth(s *server) (string, error) {
+func setupUser(s *server) (*domain.User, error) {
 	err := s.store.DeleteAllUsers()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	u, err := s.store.CreateUser(&domain.User{
@@ -39,18 +39,22 @@ func setupAuth(s *server) (string, error) {
 		Password: []byte("ohh!!!ohh!!!"),
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	token, err := s.tokens.NewJWT(&domain.Claims{
-		ID:    u.ID,
-		Email: u.Email,
+	return u, nil
+}
+
+func setupBearer(t domain.JWT, user *domain.User) (string, error) {
+	token, err := t.NewJWT(&domain.Claims{
+		ID:    user.ID,
+		Email: user.Email,
 	}, 15*time.Minute)
 	if err != nil {
 		return "", err
 	}
 
-	return "Bearer " + string(token), nil
+	return "Bearer " + string(token), err
 }
 
 func setUpTest() (*server, *httptest.Server) {
