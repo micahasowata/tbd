@@ -2,8 +2,6 @@ package domain
 
 import (
 	"time"
-
-	"github.com/micahasowata/tbd/pkg/security"
 )
 
 type Store interface {
@@ -15,6 +13,6 @@ type Store interface {
 }
 
 type JWT interface {
-	NewJWT(*security.Claims, time.Duration) ([]byte, error)
-	VerifyJWT([]byte) (*security.Claims, error)
+	NewJWT(*Claims, time.Duration) ([]byte, error)
+	VerifyJWT([]byte) (*Claims, error)
 }

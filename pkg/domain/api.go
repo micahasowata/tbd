@@ -16,3 +16,8 @@ type Post struct {
 	Title     string    `json:"title"`
 	Body      string    `json:"body"`
 }
+
+type Claims struct {
+	ID    int    `json:"user_id"`
+	Email string `json:"email"`
+}
