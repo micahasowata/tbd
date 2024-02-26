@@ -2,11 +2,15 @@ package main
 
 import (
 	"net/http"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 func (s *server) routes() http.Handler {
-	router := http.NewServeMux()
-	router.HandleFunc("POST /v1/users/create", s.createUser)
-	router.HandleFunc("POST /v1/users/login", s.loginUser)
+	router := httprouter.New()
+
+	router.HandlerFunc(http.MethodPost, "/v1/users/create", s.createUser)
+	router.HandlerFunc(http.MethodPost, "/v1/users/login", s.loginUser)
+
 	return router
 }
