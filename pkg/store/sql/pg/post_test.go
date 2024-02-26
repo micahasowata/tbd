@@ -10,18 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setUpPost() (*PGStore, *domain.Post) {
+func setUpPost() (*PGStore, *domain.Post, int) {
 	s, u := setUpUser()
 	err := s.DeleteAllUsers()
 	if err != nil {
 		log.Fatal(err)
-		return nil, nil
+		return nil, nil, 0
 	}
 
 	user, err := s.CreateUser(u)
 	if err != nil {
 		log.Fatal(err)
-		return nil, nil
+		return nil, nil, 0
 	}
 
 	post := &domain.Post{
@@ -30,10 +30,10 @@ func setUpPost() (*PGStore, *domain.Post) {
 		Body:   gofakeit.Paragraph(1, 10, 75, " "),
 	}
 
-	return s, post
+	return s, post, user.ID
 }
 func TestCreatePost(t *testing.T) {
-	s, p := setUpPost()
+	s, p, _ := setUpPost()
 	post, err := s.CreatePost(p)
 	require.Nil(t, err)
 
@@ -56,7 +56,36 @@ func TestCreatePost(t *testing.T) {
 }
 
 func TestGetUserPosts(t *testing.T) {
+	s, p, id := setUpPost()
 
+	t.Run("valid", func(t *testing.T) {
+		for range 3 {
+			p, err := s.CreatePost(p)
+			require.Nil(t, err)
+			require.NotNil(t, p)
+		}
+
+		posts, err := s.GetUserPosts(id)
+		require.Nil(t, err)
+		require.NotNil(t, posts)
+		require.NotEmpty(t, posts)
+		assert.Equal(t, 3, len(posts))
+	})
+
+	t.Run("no posts", func(t *testing.T) {
+		for range 3 {
+			p, err := s.CreatePost(p)
+			require.Nil(t, err)
+			require.NotNil(t, p)
+		}
+
+		err := s.DeleteAllUsers()
+		require.Nil(t, err)
+
+		posts, err := s.GetUserPosts(id)
+		require.Nil(t, err)
+		require.Empty(t, posts)
+	})
 }
 
 func TestDeletePost(t *testing.T) {
