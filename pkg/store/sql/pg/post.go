@@ -1,6 +1,14 @@
 package pg
 
-import "github.com/micahasowata/tbd/pkg/domain"
+import (
+	"errors"
+
+	"github.com/micahasowata/tbd/pkg/domain"
+)
+
+var (
+	ErrNoPosts = errors.New("user has no posts")
+)
 
 func (s *PGStore) CreatePost(post *domain.Post) (*domain.Post, error) {
 	query := `
@@ -25,7 +33,42 @@ func (s *PGStore) CreatePost(post *domain.Post) (*domain.Post, error) {
 	return post, nil
 }
 func (s *PGStore) GetUserPosts(userID int) ([]*domain.Post, error) {
-	return nil, nil
+	query := `
+	SELECT id, created_at, user_id, title, body
+	FROM posts
+	WHERE user_id = $1`
+
+	rows, err := s.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+
+	}
+	defer rows.Close()
+
+	posts := []*domain.Post{}
+
+	for rows.Next() {
+		var post domain.Post
+		err = rows.Scan(
+			&post.ID,
+			&post.CreatedAt,
+			&post.UserID,
+			&post.Title,
+			&post.Body,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, &post)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }
 
 func (s *PGStore) DeletePost(id int) error {
