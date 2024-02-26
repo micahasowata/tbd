@@ -21,7 +21,6 @@ func (s *server) createPost(w http.ResponseWriter, r *http.Request) {
 
 	err := s.Read(w, r, &input)
 	if err != nil {
-		s.logger.Error(err.Error())
 		s.Write(w, http.StatusBadRequest, jason.Envelope{"error": err.Error()}, nil)
 		return
 	}
