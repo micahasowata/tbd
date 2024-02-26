@@ -10,18 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setUpPost() (*PGStore, *domain.Post, int) {
+func setUpPost() (*PGStore, *domain.Post) {
 	s, u := setUpUser()
 	err := s.DeleteAllUsers()
 	if err != nil {
 		log.Fatal(err)
-		return nil, nil, 0
+		return nil, nil
 	}
 
 	user, err := s.CreateUser(u)
 	if err != nil {
 		log.Fatal(err)
-		return nil, nil, 0
+		return nil, nil
 	}
 
 	post := &domain.Post{
@@ -30,10 +30,10 @@ func setUpPost() (*PGStore, *domain.Post, int) {
 		Body:   gofakeit.Paragraph(1, 10, 75, " "),
 	}
 
-	return s, post, user.ID
+	return s, post
 }
 func TestCreatePost(t *testing.T) {
-	s, p, _ := setUpPost()
+	s, p := setUpPost()
 	post, err := s.CreatePost(p)
 	require.Nil(t, err)
 
@@ -56,7 +56,7 @@ func TestCreatePost(t *testing.T) {
 }
 
 func TestGetUserPosts(t *testing.T) {
-	s, p, id := setUpPost()
+	s, p := setUpPost()
 
 	t.Run("valid", func(t *testing.T) {
 		for range 3 {
@@ -65,7 +65,7 @@ func TestGetUserPosts(t *testing.T) {
 			require.NotNil(t, p)
 		}
 
-		posts, err := s.GetUserPosts(id)
+		posts, err := s.GetUserPosts(p.UserID)
 		require.Nil(t, err)
 		require.NotNil(t, posts)
 		require.NotEmpty(t, posts)
@@ -82,16 +82,37 @@ func TestGetUserPosts(t *testing.T) {
 		err := s.DeleteAllUsers()
 		require.Nil(t, err)
 
-		posts, err := s.GetUserPosts(id)
+		posts, err := s.GetUserPosts(p.UserID)
 		require.Nil(t, err)
 		require.Empty(t, posts)
 	})
 }
 
 func TestDeletePost(t *testing.T) {
+	s, p := setUpPost()
 
+	p, err := s.CreatePost(p)
+	require.Nil(t, err)
+	require.NotNil(t, p)
+
+	err = s.DeletePost(p)
+	require.Nil(t, err)
 }
 
-func TestDeleteAllPosts(t *testing.T) {
+func TestGetPost(t *testing.T) {
+	s, p := setUpPost()
 
+	p, err := s.CreatePost(p)
+	require.Nil(t, err)
+	require.NotNil(t, p)
+
+	cp, err := s.GetPost(p.ID)
+	require.Nil(t, err)
+	require.NotNil(t, cp)
+
+	assert.Equal(t, p.ID, cp.ID)
+	assert.Equal(t, p.UserID, cp.UserID)
+	assert.Equal(t, p.CreatedAt, cp.CreatedAt)
+	assert.Equal(t, p.Title, cp.Title)
+	assert.Equal(t, p.Body, cp.Body)
 }
