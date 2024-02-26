@@ -12,9 +12,9 @@ type Store interface {
 	GetUserByID(int) (*User, error)
 
 	CreatePost(*Post) (*Post, error)
+	GetPost(*Post) (*Post, error)
 	GetUserPosts(int) ([]*Post, error)
-	DeletePost(int) error
-	DeleteAllPosts() error
+	DeletePost(*Post) error
 }
 
 type JWT interface {
