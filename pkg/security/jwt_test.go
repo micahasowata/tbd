@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +37,7 @@ func TestNewJWT(t *testing.T) {
 	token, err := NewToken(validKey)
 	require.Nil(t, err)
 
-	claims := &Claims{
+	claims := &domain.Claims{
 		ID:    1,
 		Email: "tbd@tbd",
 	}
@@ -50,7 +51,7 @@ func TestVerifyToken(t *testing.T) {
 	token, err := NewToken(validKey)
 	require.Nil(t, err)
 
-	claims := &Claims{
+	claims := &domain.Claims{
 		ID:    1,
 		Email: "tbd@tbd",
 	}
