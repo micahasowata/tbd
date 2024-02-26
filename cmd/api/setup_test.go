@@ -2,16 +2,56 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/micahasowata/jason"
+	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/security"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/store/sql/pg"
 )
+
+func setUpReq(method, path, body string) (*http.Request, error) {
+	req, err := http.NewRequest(method, path, strings.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set(jason.ContentType, jason.ContentTypeJSON)
+	return req, nil
+}
+
+func setupAuth(s *server) (string, error) {
+	err := s.store.DeleteAllUsers()
+	if err != nil {
+		return "", err
+	}
+
+	u, err := s.store.CreateUser(&domain.User{
+		Name:     "Joe",
+		Email:    "j@doe.com",
+		Password: []byte("ohh!!!ohh!!!"),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	token, err := s.tokens.NewJWT(&domain.Claims{
+		ID:    u.ID,
+		Email: u.Email,
+	}, 15*time.Minute)
+	if err != nil {
+		return "", err
+	}
+
+	return "Bearer " + string(token), nil
+}
 
 func setUpTest() (*server, *httptest.Server) {
 	db, _ := store.NewTestDB()

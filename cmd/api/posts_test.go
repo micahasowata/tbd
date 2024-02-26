@@ -2,18 +2,15 @@ package main
 
 import (
 	"net/http"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/micahasowata/jason"
-	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCreatePost(t *testing.T) {
 	s, ts := setUpTest()
+	defer s.store.DeleteAllUsers()
 
 	tests := []struct {
 		name string
@@ -37,30 +34,15 @@ func TestCreatePost(t *testing.T) {
 		},
 	}
 
-	defer s.store.DeleteAllUsers()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodPost, ts.URL+"/v1/posts/create", strings.NewReader(tt.body))
+			req, err := setUpReq(http.MethodPost, ts.URL+"/v1/posts/create", tt.body)
 			require.Nil(t, err)
 
-			err = s.store.DeleteAllUsers()
+			bearer, err := setupAuth(s)
 			require.Nil(t, err)
 
-			u, err := s.store.CreateUser(&domain.User{
-				Name:     "Joe",
-				Email:    "j@doe.com",
-				Password: []byte("ohh!!!ohh!!!"),
-			})
-			require.Nil(t, err)
-
-			token, err := s.tokens.NewJWT(&domain.Claims{
-				ID:    u.ID,
-				Email: u.Email,
-			}, 15*time.Minute)
-			require.Nil(t, err)
-
-			req.Header.Set(jason.ContentType, jason.ContentTypeJSON)
-			req.Header.Set("Authorization", "Bearer "+string(token))
+			req.Header.Set("Authorization", bearer)
 
 			res, err := ts.Client().Do(req)
 			require.Nil(t, err)
