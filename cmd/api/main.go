@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/micahasowata/jason"
 	"github.com/micahasowata/tbd/pkg/domain"
+	"github.com/micahasowata/tbd/pkg/security"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/store/sql/pg"
 )
@@ -19,6 +20,7 @@ type server struct {
 	logger   *slog.Logger
 	validate *validator.Validate
 	store    domain.Store
+	tokens   domain.JWT
 }
 
 func main() {
@@ -37,11 +39,18 @@ func main() {
 
 	logger.Info("db connected successfully")
 
+	key := []byte(os.Getenv("TOKEN_KEY"))
+	token, err := security.NewToken(key)
+	if err != nil {
+		panic(err)
+	}
+
 	s := &server{
 		Jason:    jason.New(1_048_576, false, true),
 		logger:   logger,
 		validate: validator.New(validator.WithRequiredStructEnabled()),
 		store:    pg.New(db),
+		tokens:   token,
 	}
 
 	srv := &http.Server{
