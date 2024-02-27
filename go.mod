@@ -12,6 +12,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/micahasowata/jason v1.0.1
 	github.com/pseidemann/finish v1.2.0
+	github.com/rs/cors v1.10.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.19.0

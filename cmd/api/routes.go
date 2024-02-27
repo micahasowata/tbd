@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
+	"github.com/rs/cors"
 	"go.uber.org/zap"
 )
 
@@ -29,5 +30,5 @@ func (s *server) routes() http.Handler {
 	router.With(s.authUser).Post("/v1/posts/create", s.createPost)
 	router.With(s.authUser).Get("/v1/posts/{id}", s.getPost)
 
-	return router
+	return cors.Default().Handler(router)
 }
