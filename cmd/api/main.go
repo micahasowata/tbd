@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
 	"os"
 
@@ -12,12 +11,14 @@ import (
 	"github.com/micahasowata/tbd/pkg/security"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/store/sql/pg"
+	"github.com/pseidemann/finish"
+	"go.uber.org/zap"
 )
 
 type server struct {
 	*jason.Jason
 
-	logger   *slog.Logger
+	logger   *zap.Logger
 	validate *validator.Validate
 	store    domain.Store
 	tokens   domain.JWT
@@ -29,7 +30,10 @@ func main() {
 		panic(err)
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
 
 	db, err := store.New(os.Getenv("DB_DSN"))
 	if err != nil {
@@ -54,15 +58,23 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:     ":8000",
+		Addr:     os.Getenv("PORT"),
 		Handler:  s.routes(),
-		ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		ErrorLog: zap.NewStdLog(logger),
 	}
 
-	logger.Info("server started", slog.String("port", srv.Addr))
+	logger.Info("server started", zap.String("port", srv.Addr))
 
-	err = srv.ListenAndServe()
-	if err != nil {
-		logger.Error(err.Error())
-	}
+	manager := finish.New()
+	manager.Log = logger.Sugar()
+	manager.Add(srv)
+
+	go func() {
+		err := srv.ListenAndServe()
+		if err != http.ErrServerClosed {
+			logger.Error(err.Error())
+		}
+	}()
+
+	manager.Wait()
 }
