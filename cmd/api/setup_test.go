@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"github.com/micahasowata/tbd/pkg/security"
 	"github.com/micahasowata/tbd/pkg/store"
 	"github.com/micahasowata/tbd/pkg/store/sql/pg"
+	"go.uber.org/zap"
 )
 
 func setUpReq(method, path, body string) (*http.Request, error) {
@@ -64,7 +64,7 @@ func setUpTest() (*server, *httptest.Server) {
 	srv := &server{
 		Jason: jason.New(100, false, true),
 
-		logger:   slog.Default(),
+		logger:   zap.NewExample(zap.Development()),
 		validate: validator.New(validator.WithRequiredStructEnabled()),
 		store:    pg.New(db),
 		tokens:   token,
