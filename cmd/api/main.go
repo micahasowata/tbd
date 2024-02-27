@@ -2,10 +2,8 @@ package main
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/joho/godotenv"
 	"github.com/micahasowata/jason"
 	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/security"
@@ -25,17 +23,12 @@ type server struct {
 }
 
 func main() {
-	err := godotenv.Load(".envrc")
-	if err != nil {
-		panic(err)
-	}
-
 	logger, err := zap.NewProduction()
 	if err != nil {
 		panic(err)
 	}
 
-	db, err := store.New(os.Getenv("DB_DSN"))
+	db, err := store.New("postgres://main:HmgJYuBHO23pGp7YrHaY@tbd.cjmoua262vpy.eu-north-1.rds.amazonaws.com:5432/tbd")
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +36,7 @@ func main() {
 
 	logger.Info("db connected successfully")
 
-	key := []byte(os.Getenv("TOKEN_KEY"))
+	key := []byte("Y_1,5a?gP^M5*k3#xxjs7muWJEyGm>su")
 	token, err := security.NewToken(key)
 	if err != nil {
 		panic(err)
@@ -58,7 +51,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:     os.Getenv("PORT"),
+		Addr:     ":8000",
 		Handler:  s.routes(),
 		ErrorLog: zap.NewStdLog(logger),
 	}
