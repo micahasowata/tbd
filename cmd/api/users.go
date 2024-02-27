@@ -89,8 +89,5 @@ func (s *server) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.Write(w, http.StatusOK, jason.Envelope{"token": string(token)}, nil)
-	if err != nil {
-		return
-	}
+	s.Write(w, http.StatusOK, jason.Envelope{"token": string(token)}, nil)
 }
