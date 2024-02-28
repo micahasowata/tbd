@@ -1,4 +1,4 @@
-include .envrc
+include .env
 
 .PHONY: run
 run:
