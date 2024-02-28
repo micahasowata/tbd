@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-chi/httprate v0.8.0
 	github.com/go-playground/validator/v10 v10.18.0
+	github.com/joho/godotenv v1.5.1
 	github.com/kataras/jwt v0.1.12
 	github.com/lib/pq v1.10.9
 	github.com/micahasowata/jason v1.0.1

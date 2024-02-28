@@ -2,8 +2,10 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/joho/godotenv"
 	"github.com/micahasowata/jason"
 	"github.com/micahasowata/tbd/pkg/domain"
 	"github.com/micahasowata/tbd/pkg/security"
@@ -23,20 +25,33 @@ type server struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		panic(err)
+	}
 	logger, err := zap.NewProduction()
 	if err != nil {
 		panic(err)
 	}
 
-	db, err := store.New("postgres://main:HmgJYuBHO23pGp7YrHaY@tbd.cjmoua262vpy.eu-north-1.rds.amazonaws.com:5432/tbd")
+	var dsn string
+
+	switch os.Getenv("MODE") {
+	case "production":
+		dsn = os.Getenv("PROD_DB_DSN")
+	default:
+		dsn = os.Getenv("DEV_DB_DSN")
+	}
+
+	db, err := store.New(dsn)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
-	logger.Info("db connected successfully")
+	logger.Info("db connected successfully", zap.String("dsn", dsn))
 
-	key := []byte("Y_1,5a?gP^M5*k3#xxjs7muWJEyGm>su")
+	key := []byte(os.Getenv("KEY"))
 	token, err := security.NewToken(key)
 	if err != nil {
 		panic(err)
