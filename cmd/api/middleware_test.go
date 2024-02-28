@@ -14,7 +14,12 @@ import (
 
 func TestAuthUser(t *testing.T) {
 	s, _ := setUpTest()
-	defer s.store.DeleteAllUsers()
+	defer func() {
+		err := s.store.DeleteAllUsers()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	u, err := s.store.CreateUser(&domain.User{
 		Name:     "John",
 		Email:    "j@doe.co",
@@ -73,7 +78,8 @@ func TestAuthUser(t *testing.T) {
 			r.Header.Set("Authorization", tt.header)
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("OK"))
+				_, err := w.Write([]byte("OK"))
+				require.Nil(t, err)
 			})
 
 			s.authUser(next).ServeHTTP(rr, r)
@@ -115,7 +121,8 @@ func TestAuthUser_InvalidUser(t *testing.T) {
 	r.Header.Set("Authorization", "Bearer "+string(token))
 
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		_, err := w.Write([]byte("OK"))
+		require.Nil(t, err)
 	})
 
 	s.authUser(next).ServeHTTP(rr, r)

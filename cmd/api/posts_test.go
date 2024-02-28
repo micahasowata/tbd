@@ -12,7 +12,12 @@ import (
 
 func TestCreatePost(t *testing.T) {
 	s, ts := setUpTest()
-	defer s.store.DeleteAllUsers()
+	defer func() {
+		err := s.store.DeleteAllUsers()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	tests := []struct {
 		name string
@@ -60,7 +65,12 @@ func TestCreatePost(t *testing.T) {
 
 func TestGetPost(t *testing.T) {
 	s, ts := setUpTest()
-	defer s.store.DeleteAllUsers()
+	defer func() {
+		err := s.store.DeleteAllUsers()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	user, err := setupUser(s)
 	require.Nil(t, err)

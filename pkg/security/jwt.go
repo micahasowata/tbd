@@ -46,7 +46,11 @@ func (t *Token) VerifyJWT(token []byte) (*domain.Claims, error) {
 	}
 
 	c := &domain.Claims{}
-	vt.Claims(c)
+
+	err = vt.Claims(c)
+	if err != nil {
+		return nil, err
+	}
 
 	return c, nil
 }

@@ -37,7 +37,11 @@ func TestCreatePost(t *testing.T) {
 	post, err := s.CreatePost(p)
 	require.Nil(t, err)
 
-	defer s.DeleteAllUsers()
+	defer func() {
+		err := s.DeleteAllUsers()
+		require.Nil(t, err)
+
+	}()
 
 	t.Run("valid", func(t *testing.T) {
 		assert.Greater(t, post.UserID, 0)
@@ -47,7 +51,8 @@ func TestCreatePost(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		s.DeleteAllUsers()
+		err := s.DeleteAllUsers()
+		require.Nil(t, err)
 
 		post, err := s.CreatePost(p)
 		require.NotNil(t, err)

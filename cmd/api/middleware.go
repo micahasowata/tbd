@@ -13,7 +13,11 @@ func (s *server) authUser(next http.Handler) http.Handler {
 		header := r.Header.Get("Authorization")
 		values := strings.Split(header, " ")
 		if len(values) != 2 || values[0] != "Bearer" {
-			s.Write(w, http.StatusUnauthorized, jason.Envelope{"error": "invalid authorization header"}, nil)
+			err := s.Write(w, http.StatusUnauthorized, jason.Envelope{"error": "invalid authorization header"}, nil)
+			if err != nil {
+				s.logger.Error(err.Error())
+				return
+			}
 			return
 		}
 
@@ -22,14 +26,22 @@ func (s *server) authUser(next http.Handler) http.Handler {
 		claims, err := s.tokens.VerifyJWT(token)
 		if err != nil {
 			s.logger.Error(err.Error())
-			s.Write(w, http.StatusForbidden, jason.Envelope{"error": "invalid token"}, nil)
+			err := s.Write(w, http.StatusForbidden, jason.Envelope{"error": "invalid token"}, nil)
+			if err != nil {
+				s.logger.Error(err.Error())
+				return
+			}
 			return
 		}
 
 		u, err := s.store.GetUserByEmail(claims.Email)
 		if err != nil {
 			s.logger.Error(err.Error())
-			s.Write(w, http.StatusForbidden, jason.Envelope{"error": "token contains invalid data"}, nil)
+			err := s.Write(w, http.StatusForbidden, jason.Envelope{"error": "token contains invalid data"}, nil)
+			if err != nil {
+				s.logger.Error(err.Error())
+				return
+			}
 			return
 		}
 

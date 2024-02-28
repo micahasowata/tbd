@@ -14,7 +14,11 @@ import (
 func (s *server) createPost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userID).(int)
 	if !ok {
-		s.Write(w, http.StatusBadRequest, jason.Envelope{"error": "invalid request"}, nil)
+		err := s.Write(w, http.StatusBadRequest, jason.Envelope{"error": "invalid request"}, nil)
+		if err != nil {
+			s.logger.Error(err.Error())
+			return
+		}
 		return
 	}
 
@@ -25,13 +29,21 @@ func (s *server) createPost(w http.ResponseWriter, r *http.Request) {
 
 	err := s.Read(w, r, &input)
 	if err != nil {
-		s.Write(w, http.StatusBadRequest, jason.Envelope{"error": err.Error()}, nil)
+		err := s.Write(w, http.StatusBadRequest, jason.Envelope{"error": err.Error()}, nil)
+		if err != nil {
+			s.logger.Error(err.Error())
+			return
+		}
 		return
 	}
 
 	err = s.validate.Struct(&input)
 	if err != nil {
-		s.Write(w, http.StatusUnprocessableEntity, jason.Envelope{"error": err.Error()}, nil)
+		err := s.Write(w, http.StatusUnprocessableEntity, jason.Envelope{"error": err.Error()}, nil)
+		if err != nil {
+			s.logger.Error(err.Error())
+			return
+		}
 		return
 	}
 
@@ -44,17 +56,28 @@ func (s *server) createPost(w http.ResponseWriter, r *http.Request) {
 	post, err = s.store.CreatePost(post)
 	if err != nil {
 		s.logger.Error(err.Error())
-		s.Write(w, http.StatusInternalServerError, jason.Envelope{"error": "request could no longer be processed"}, nil)
+		err := s.Write(w, http.StatusInternalServerError, jason.Envelope{"error": "request could no longer be processed"}, nil)
+		if err != nil {
+			s.logger.Error(err.Error())
+			return
+		}
 		return
 	}
 
-	s.Write(w, http.StatusOK, jason.Envelope{"post": post}, nil)
+	err = s.Write(w, http.StatusOK, jason.Envelope{"post": post}, nil)
+	if err != nil {
+		s.logger.Error(err.Error())
+		return
+	}
 }
 
 func (s *server) getPost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(userID).(int)
 	if !ok {
-		s.Write(w, http.StatusBadRequest, jason.Envelope{"error": "invalid request"}, nil)
+		err := s.Write(w, http.StatusBadRequest, jason.Envelope{"error": "invalid request"}, nil)
+		if err != nil {
+			panic(err)
+		}
 		return
 	}
 
@@ -62,7 +85,11 @@ func (s *server) getPost(w http.ResponseWriter, r *http.Request) {
 
 	postID, err := strconv.Atoi(id)
 	if err != nil {
-		s.Write(w, http.StatusUnprocessableEntity, jason.Envelope{"error": "invalid id"}, nil)
+		err := s.Write(w, http.StatusUnprocessableEntity, jason.Envelope{"error": "invalid id"}, nil)
+		if err != nil {
+			s.logger.Error(err.Error())
+			return
+		}
 		return
 	}
 
@@ -75,12 +102,24 @@ func (s *server) getPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, pg.ErrPostNotFound):
-			s.Write(w, http.StatusNotFound, jason.Envelope{"error": "post not found"}, nil)
+			err := s.Write(w, http.StatusNotFound, jason.Envelope{"error": "post not found"}, nil)
+			if err != nil {
+				s.logger.Error(err.Error())
+				return
+			}
 		default:
-			s.Write(w, http.StatusInternalServerError, jason.Envelope{"error": "request could no longer be processed"}, nil)
+			err := s.Write(w, http.StatusInternalServerError, jason.Envelope{"error": "request could no longer be processed"}, nil)
+			if err != nil {
+				s.logger.Error(err.Error())
+				return
+			}
 		}
 		return
 	}
 
-	s.Write(w, http.StatusOK, jason.Envelope{"post": post}, nil)
+	err = s.Write(w, http.StatusOK, jason.Envelope{"post": post}, nil)
+	if err != nil {
+		s.logger.Error(err.Error())
+		return
+	}
 }
