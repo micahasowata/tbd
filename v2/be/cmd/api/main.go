@@ -2,22 +2,35 @@ package main
 
 import (
 	"errors"
+	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
+	"v2/be/internal/db"
+	"v2/be/internal/models"
 
+	_ "github.com/joho/godotenv/autoload"
 	"go.uber.org/zap"
 )
 
 type application struct {
 	logger *zap.Logger
+	models *models.Models
 }
 
 func main() {
 	logger := zap.Must(zap.NewProduction())
 
+	dsn := os.Getenv("DSN")
+	pool, err := db.New(dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	app := application{
 		logger: logger,
+		models: models.New(pool),
 	}
 
 	srv := &http.Server{
@@ -31,7 +44,7 @@ func main() {
 
 	logger.Info("server start", zap.String("addr", srv.Addr))
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
 		logger.Error("startup error", zap.Error(err))
 	}

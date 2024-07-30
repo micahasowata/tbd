@@ -26,3 +26,21 @@ func (app *application) readError(w http.ResponseWriter, err error) {
 		app.writeError(w, err)
 	}
 }
+
+func (app *application) serverError(w http.ResponseWriter, err error) {
+	app.logError(err)
+
+	err = parser.Write(w, http.StatusInternalServerError, parser.Envelope{"error": "request not processable"})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}
+
+func (app *application) dataConflictError(w http.ResponseWriter, err error) {
+	app.logError(err)
+
+	err = parser.Write(w, http.StatusConflict, parser.Envelope{"error": err.Error()})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}
