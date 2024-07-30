@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/microcosm-cc/bluemonday"
 )
 
 var (
@@ -89,4 +91,8 @@ func Read(w http.ResponseWriter, r *http.Request, dst any) error {
 		return errMultipleValues
 	}
 	return nil
+}
+
+func Sanitize(s string) string {
+	return bluemonday.NewPolicy().Sanitize(s)
 }
