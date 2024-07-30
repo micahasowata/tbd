@@ -85,7 +85,7 @@ func Read(w http.ResponseWriter, r *http.Request, dst any) error {
 	}
 
 	err = dec.Decode(&struct{}{})
-	if errors.Is(err, io.EOF) {
+	if !errors.Is(err, io.EOF) {
 		return errMultipleValues
 	}
 	return nil
