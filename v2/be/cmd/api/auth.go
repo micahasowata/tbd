@@ -50,6 +50,8 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.sessions.Put(r.Context(), authenticatedUser, u.ID)
+
 	err = parser.Write(w, http.StatusCreated, parser.Envelope{"payload": u.ID})
 	if err != nil {
 		app.writeError(w, err)

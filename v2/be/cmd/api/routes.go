@@ -8,6 +8,8 @@ import (
 
 func (app *application) routes() http.Handler {
 	router := chi.NewRouter()
+	router.Use(app.sessions.LoadAndSave)
+
 	router.Post("/signup", app.signup)
 	return router
 }

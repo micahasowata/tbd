@@ -10,13 +10,18 @@ import (
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 
+	"github.com/alexedwards/scs/pgxstore"
+	"github.com/alexedwards/scs/v2"
 	_ "github.com/joho/godotenv/autoload"
 	"go.uber.org/zap"
 )
 
+const authenticatedUser = "authenticatedUser"
+
 type application struct {
-	logger *zap.Logger
-	models *models.Models
+	logger   *zap.Logger
+	sessions *scs.SessionManager
+	models   *models.Models
 }
 
 func main() {
@@ -28,9 +33,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	sessions := scs.New()
+	sessions.Store = pgxstore.NewWithCleanupInterval(pool, 10*time.Hour)
+
 	app := application{
-		logger: logger,
-		models: models.New(pool),
+		logger:   logger,
+		sessions: sessions,
+		models:   models.New(pool),
 	}
 
 	srv := &http.Server{
