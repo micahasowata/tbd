@@ -203,3 +203,30 @@ func (app *application) completeTask(w http.ResponseWriter, r *http.Request) {
 		app.writeError(w, err)
 	}
 }
+
+func (app *application) deleteTask(w http.ResponseWriter, r *http.Request) {
+	id := getTaskID(r)
+	userID := getIDFromCtx(r)
+
+	t, err := app.models.Tasks.GetByID(r.Context(), id, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrRecordNotFound):
+			app.recordNotFoundError(w, err)
+		default:
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	err = app.models.Tasks.Delete(r.Context(), t.ID, userID)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": "deleted"})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}

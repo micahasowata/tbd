@@ -23,6 +23,7 @@ func (app *application) routes() http.Handler {
 		r.Get("/tasks/{task_id}", app.getTask)
 		r.Patch("/tasks/{task_id}/update", app.updateTask)
 		r.Patch("/tasks/{task_id}/complete", app.completeTask)
+		r.Delete("/tasks/{task_id}", app.deleteTask)
 	})
 	return router
 }
