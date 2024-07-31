@@ -62,3 +62,10 @@ func (app *application) unauthorizedAccessError(w http.ResponseWriter, err error
 		app.writeError(w, err)
 	}
 }
+
+func (app *application) invalidDataError(w http.ResponseWriter, errs map[string]string) {
+	err := parser.Write(w, http.StatusUnauthorized, parser.Envelope{"error": errs})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}

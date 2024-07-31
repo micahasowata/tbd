@@ -6,8 +6,10 @@ import (
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 	"v2/be/internal/parser"
+	"v2/be/internal/validator"
 
 	"github.com/alexedwards/argon2id"
+	pv "github.com/wagslane/go-password-validator"
 )
 
 func (app *application) signup(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +26,20 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 
 	input.Username = parser.Sanitize(input.Username)
 	input.Password = parser.Sanitize(input.Password)
+
+	v := validator.New()
+	v.RequiredString(input.Username, "username", validator.Required)
+	v.RequiredString(input.Password, "password", validator.Required)
+	v.MinString(input.Password, validator.MinPasswordLength, "password", "must be at least 8 characters")
+	err = pv.Validate(input.Password, validator.MinPasswordEntropy)
+	if err != nil {
+		v.AddError("password", err.Error())
+	}
+
+	if !v.Valid() {
+		app.invalidDataError(w, v.Errors())
+		return
+	}
 
 	hash, err := argon2id.CreateHash(input.Password, argon2id.DefaultParams)
 	if err != nil {
@@ -72,6 +88,20 @@ func (app *application) login(w http.ResponseWriter, r *http.Request) {
 
 	input.Username = parser.Sanitize(input.Username)
 	input.Password = parser.Sanitize(input.Password)
+
+	v := validator.New()
+	v.RequiredString(input.Username, "username", validator.Required)
+	v.RequiredString(input.Password, "password", validator.Required)
+	v.MinString(input.Password, validator.MinPasswordLength, "password", "must be at least 8 characters")
+	err = pv.Validate(input.Password, validator.MinPasswordEntropy)
+	if err != nil {
+		v.AddError("password", err.Error())
+	}
+
+	if !v.Valid() {
+		app.invalidDataError(w, v.Errors())
+		return
+	}
 
 	u, err := app.models.Users.GetByUsername(r.Context(), input.Username)
 	if err != nil {
