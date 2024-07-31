@@ -1,5 +1,7 @@
 package validator
 
+import "strings"
+
 const (
 	MinPasswordLength  = 8
 	MinPasswordEntropy = 60
@@ -33,14 +35,14 @@ func (v *Validator) AddError(field, message string) {
 }
 
 func (v *Validator) RequiredString(s, field, message string) {
-	empty := len(s) == 0
+	empty := len(strings.TrimSpace(s)) == 0
 	if empty {
 		v.AddError(field, message)
 	}
 }
 
 func (v *Validator) MinString(s string, length int, field string, message string) {
-	lesser := len(s) < length
+	lesser := len(strings.TrimSpace(s)) < length
 	if lesser {
 		v.AddError(field, message)
 	}
