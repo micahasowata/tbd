@@ -163,3 +163,44 @@ func (m *TasksModel) GetByID(ctx context.Context, id, userID string) (*Task, err
 
 	return &t, nil
 }
+
+func (m *TasksModel) Update(ctx context.Context, t *Task) error {
+	query := `UPDATE tasks
+	SET title = $1, description = $2
+	WHERE id = $3 AND completed = false`
+
+	args := []any{t.Title, t.Description, t.ID}
+
+	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:       pgx.Serializable,
+		AccessMode:     pgx.ReadWrite,
+		DeferrableMode: pgx.NotDeferrable,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	result, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		switch {
+		case strings.Contains(db.FormatErr(err), "tasks_title_user_id_key"):
+			return ErrDuplicateTask
+		default:
+			return err
+		}
+	}
+
+	if result.RowsAffected() != 1 {
+		return ErrOpFailed
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
