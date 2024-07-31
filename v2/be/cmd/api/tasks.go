@@ -58,3 +58,21 @@ func (app *application) createTask(w http.ResponseWriter, r *http.Request) {
 		app.writeError(w, err)
 	}
 }
+
+func (app *application) allTasks(w http.ResponseWriter, r *http.Request) {
+	id := getIDFromCtx(r)
+	tasks, err := app.models.Tasks.All(r.Context(), id)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	if tasks == nil {
+		tasks = []*models.Task{}
+	}
+
+	err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": tasks})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}
