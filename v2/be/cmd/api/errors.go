@@ -53,3 +53,12 @@ func (app *application) recordNotFoundError(w http.ResponseWriter, err error) {
 		app.writeError(w, err)
 	}
 }
+
+func (app *application) unauthorizedAccessError(w http.ResponseWriter, err error) {
+	app.logError(err)
+
+	err = parser.Write(w, http.StatusUnauthorized, parser.Envelope{"error": err.Error()})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}

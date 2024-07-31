@@ -95,9 +95,32 @@ func (app *application) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = app.sessions.RenewToken(r.Context())
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
 	app.sessions.Put(r.Context(), authenticatedUser, u.ID)
 
 	err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": u.ID})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}
+
+func (app *application) logout(w http.ResponseWriter, r *http.Request) {
+	id := getIDFromCtx(r)
+
+	err := app.sessions.RenewToken(r.Context())
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	app.sessions.Remove(r.Context(), authenticatedUser)
+
+	err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": id})
 	if err != nil {
 		app.writeError(w, err)
 	}

@@ -12,5 +12,11 @@ func (app *application) routes() http.Handler {
 
 	router.Post("/signup", app.signup)
 	router.Post("/login", app.login)
+
+	router.Group(func(r chi.Router) {
+		r.Use(app.requireAuthenticatedUser)
+
+		r.Post("/logout", app.logout)
+	})
 	return router
 }

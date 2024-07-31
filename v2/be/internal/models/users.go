@@ -103,3 +103,32 @@ func (m *UsersModel) GetByUsername(ctx context.Context, username string) (*User,
 
 	return &u, nil
 }
+
+func (m *UsersModel) Exists(ctx context.Context, id string) (bool, error) {
+	query := `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)`
+
+	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:       pgx.Serializable,
+		AccessMode:     pgx.ReadOnly,
+		DeferrableMode: pgx.NotDeferrable,
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	var exists bool
+	err = tx.QueryRow(ctx, query, id).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, err
+}
