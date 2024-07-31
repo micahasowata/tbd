@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"v2/be/internal/parser"
+
+	"github.com/go-chi/chi/v5"
 )
 
 var (
@@ -16,6 +19,10 @@ var userID = ctx("userID")
 
 func getIDFromCtx(r *http.Request) string {
 	return r.Context().Value(userID).(string)
+}
+
+func getTaskID(r *http.Request) string {
+	return parser.Sanitize(chi.URLParam(r, "task_id"))
 }
 
 func (app *application) requireAuthenticatedUser(next http.Handler) http.Handler {

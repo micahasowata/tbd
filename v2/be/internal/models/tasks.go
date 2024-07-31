@@ -118,3 +118,48 @@ func (m *TasksModel) All(ctx context.Context, userID string) ([]*Task, error) {
 
 	return tasks, nil
 }
+
+func (m *TasksModel) GetByID(ctx context.Context, id, userID string) (*Task, error) {
+	query := `SELECT id, title, description, completed
+	FROM tasks
+	WHERE id = $1 AND user_id = $2`
+
+	args := []any{id, userID}
+
+	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:       pgx.Serializable,
+		AccessMode:     pgx.ReadOnly,
+		DeferrableMode: pgx.NotDeferrable,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	var t Task
+
+	err = tx.QueryRow(ctx, query, args...).Scan(
+		&t.ID,
+		&t.Title,
+		&t.Description,
+		&t.Completed,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &t, nil
+}

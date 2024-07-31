@@ -76,3 +76,24 @@ func (app *application) allTasks(w http.ResponseWriter, r *http.Request) {
 		app.writeError(w, err)
 	}
 }
+
+func (app *application) getTask(w http.ResponseWriter, r *http.Request) {
+	id := getTaskID(r)
+	userID := getIDFromCtx(r)
+
+	t, err := app.models.Tasks.GetByID(r.Context(), id, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrRecordNotFound):
+			app.recordNotFoundError(w, err)
+		default:
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	err = parser.Write(w, http.StatusFound, parser.Envelope{"payload": t})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}
