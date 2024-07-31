@@ -8,8 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var dsn = "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable"
+
 func TestNew(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 

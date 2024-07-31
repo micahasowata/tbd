@@ -13,7 +13,7 @@ import (
 )
 
 func TestUsersModelCreate(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 
@@ -80,7 +80,7 @@ func TestUsersModelCreate(t *testing.T) {
 }
 
 func TestUsersModelCreateWithCancelledContext(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 
@@ -104,7 +104,7 @@ func TestUsersModelCreateWithCancelledContext(t *testing.T) {
 }
 
 func TestGetByUsername(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 
@@ -176,7 +176,7 @@ func TestGetByUsername(t *testing.T) {
 }
 
 func TestUsersModelExists(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 
@@ -185,7 +185,7 @@ func TestUsersModelExists(t *testing.T) {
 	usersModel := &UsersModel{pool: pool}
 
 	t.Run("Existing User", func(t *testing.T) {
-		ctx := context.Background() 
+		ctx := context.Background()
 		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
 		require.NoError(t, err)
 
@@ -209,8 +209,8 @@ func TestUsersModelExists(t *testing.T) {
 
 		exists, err := usersModel.Exists(ctx, id)
 		require.NoError(t, err)
-		require.False(t, exists) 
-	})	
+		require.False(t, exists)
+	})
 
 	t.Run("Invalid ID", func(t *testing.T) {
 		ctx := context.Background()
@@ -218,19 +218,19 @@ func TestUsersModelExists(t *testing.T) {
 
 		exists, err := usersModel.Exists(ctx, id)
 		require.NoError(t, err)
-		require.False(t, exists) 
-	})	
+		require.False(t, exists)
+	})
 
 	t.Run("Empty ID", func(t *testing.T) {
-		ctx := context.Background() 
+		ctx := context.Background()
 		exists, err := usersModel.Exists(ctx, "")
 		require.NoError(t, err)
-		require.False(t, exists) 
+		require.False(t, exists)
 	})
 }
 
 func TestUsersModelExistsWithClosedPool(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 
@@ -244,7 +244,7 @@ func TestUsersModelExistsWithClosedPool(t *testing.T) {
 }
 
 func TestUsersModelExistsWithCancelledContext(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 
