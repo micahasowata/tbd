@@ -27,10 +27,17 @@ type TasksModel struct {
 }
 
 func (m *TasksModel) Create(ctx context.Context, t *Task) error {
+<<<<<<< HEAD
 	query := `INSERT INTO tasks (id, user_id, title, description, completed)
 	VALUES ($1, $2, $3, $4, $5)`
 
 	args := []any{t.ID, t.UserID, t.Title, t.Description, t.Completed}
+=======
+	query := `INSERT INTO tasks (id, user_id, title, description)
+	VALUES ($1, $2, $3, $4)`
+
+	args := []any{t.ID, t.UserID, t.Title, t.Description}
+>>>>>>> caa53d69f37ffc231928ff06ffb56c8fc0fc8915
 
 	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
