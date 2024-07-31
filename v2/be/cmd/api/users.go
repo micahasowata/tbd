@@ -33,10 +33,10 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 
 	input.Password = hash
 
-	u := models.User{
+	u := &models.User{
 		ID:       db.NewID(),
 		Username: input.Username,
-		Password: input.Password,
+		Password: []byte(input.Password),
 	}
 
 	err = app.models.Users.Create(r.Context(), u)
@@ -53,6 +53,51 @@ func (app *application) signup(w http.ResponseWriter, r *http.Request) {
 	app.sessions.Put(r.Context(), authenticatedUser, u.ID)
 
 	err = parser.Write(w, http.StatusCreated, parser.Envelope{"payload": u.ID})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}
+
+func (app *application) login(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	err := parser.Read(w, r, &input)
+	if err != nil {
+		app.readError(w, err)
+		return
+	}
+
+	input.Username = parser.Sanitize(input.Username)
+	input.Password = parser.Sanitize(input.Password)
+
+	u, err := app.models.Users.GetByUsername(r.Context(), input.Username)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrRecordNotFound):
+			app.recordNotFoundError(w, err)
+		default:
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	match, err := argon2id.ComparePasswordAndHash(input.Password, string(u.Password))
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	if !match {
+		app.recordNotFoundError(w, models.ErrRecordNotFound)
+		return
+	}
+
+	app.sessions.Put(r.Context(), authenticatedUser, u.ID)
+
+	err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": u.ID})
 	if err != nil {
 		app.writeError(w, err)
 	}

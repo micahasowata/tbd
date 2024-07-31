@@ -11,5 +11,6 @@ func (app *application) routes() http.Handler {
 	router.Use(app.sessions.LoadAndSave)
 
 	router.Post("/signup", app.signup)
+	router.Post("/login", app.login)
 	return router
 }

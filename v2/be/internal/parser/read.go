@@ -94,5 +94,5 @@ func Read(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func Sanitize(s string) string {
-	return bluemonday.NewPolicy().Sanitize(s)
+	return bluemonday.NewPolicy().Sanitize(strings.TrimSpace(s))
 }
