@@ -1,0 +1,309 @@
+run:
+  concurrency: 4
+  timeout: 20m
+  issues-exit-code: 1
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: false
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  path-prefix: ""
+  sort-results: false
+linters-settings:
+  cyclop:
+    max-complexity: 10
+    package-average: 0
+    skip-tests: false
+  dogsled:
+    max-blank-identifiers: 2
+  dupl:
+    threshold: 100
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+  exhaustive:
+    check-generated: false
+    default-signifies-exhaustive: false
+  funlen:
+    lines: 60
+    statements: 40
+  gocognit:
+    min-complexity: 10
+  nestif:
+    min-complexity: 4
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  gocritic:
+    disabled-checks:
+      - regexpMust
+    enabled-tags:
+      - performance
+      - diagnostic
+      - style
+    disabled-tags:
+      - experimental
+    settings:
+      captLocal:
+        paramsOnly: true
+      elseif:
+        skipBalanced: true
+      hugeParam:
+        sizeThreshold: 80
+      rangeExprCopy:
+        sizeThreshold: 512
+        skipTestFuncs: true
+      rangeValCopy:
+        sizeThreshold: 32
+        skipTestFuncs: true
+      underef:
+        skipRecvDeref: true
+  gocyclo:
+    min-complexity: 10
+  godot:
+    scope: declarations
+    exclude: null
+    capital: false
+  godox:
+    keywords:
+      - NOTE
+      - OPTIMIZE
+      - HACK
+  gofmt:
+    simplify: true
+  gofumpt:
+    extra-rules: false
+  golint:
+    min-confidence: 0.8
+  gomoddirectives:
+    replace-local: false
+    retract-allow-no-explanation: false
+    exclude-forbidden: false
+  gomodguard:
+    allowed:
+      modules: null
+      domains: null
+    blocked:
+      modules: null
+      versions: null
+      local_replace_directives: false
+  gosimple:
+    checks:
+      - all
+  govet:
+    settings:
+      printf:
+        funcs:
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    enable:
+      - atomicalign
+      - shadow
+    enable-all: false
+    disable-all: false
+  depguard:
+    list-type: blacklist
+    include-go-root: false
+    packages:
+      - github.com/sirupsen/logrus
+      - gitlab.com/gitlab-org/labkit/log
+      - log
+    packages-with-error-message:
+      - github.com/sirupsen/logrus: use slog
+      - gitlab.com/gitlab-org/labkit/log: use slog
+      - log: use slog
+      - go.uber.org/zap: use slog
+  ifshort:
+    max-decl-lines: 1
+    max-decl-chars: 30
+  importas:
+    no-unaliased: true
+  lll:
+    line-length: 120
+    tab-width: 1
+  makezero:
+    always: false
+  maligned:
+    suggest-new: true
+  misspell:
+    locale: US
+  nakedret:
+    max-func-lines: 30
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+  promlinter:
+    strict: false
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: true
+    allow-no-explanation: []
+    require-explanation: true
+    require-specific: true
+  staticcheck:
+    checks:
+      - all
+  stylecheck:
+    checks:
+      - ST1003
+    dot-import-whitelist:
+      - fmt
+    initialisms:
+      - ACL
+      - API
+      - ASCII
+      - CPU
+      - CSS
+      - DNS
+      - EOF
+      - GUID
+      - HTML
+      - HTTP
+      - HTTPS
+      - ID
+      - IP
+      - JSON
+      - QPS
+      - RAM
+      - RPC
+      - SLA
+      - SMTP
+      - SQL
+      - SSH
+      - TCP
+      - TLS
+      - TTL
+      - UDP
+      - UI
+      - GID
+      - UID
+      - UUID
+      - URI
+      - URL
+      - UTF8
+      - VM
+      - XML
+      - XMPP
+      - XSRF
+      - XSS
+      - RPCAPI
+      - KAS
+      - CIDR
+      - GRPC
+      - IO
+    http-status-code-whitelist: []
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        json: camel
+        yaml: camel
+        xml: camel
+        bson: camel
+        avro: snake
+        mapstructure: kebab
+  testpackage: null
+  thelper:
+    test:
+      first: true
+      name: true
+      begin: true
+    benchmark:
+      first: true
+      name: true
+      begin: true
+    tb:
+      first: true
+      name: true
+      begin: true
+  unparam:
+    check-exported: false
+  whitespace:
+    multi-if: false
+    multi-func: false
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+  wsl:
+    allow-assign-and-anything: false
+    allow-assign-and-call: true
+    allow-cuddle-declarations: false
+    allow-multiline-assign: true
+    allow-separated-leading-comment: false
+    allow-trailing-comment: false
+    force-case-trailing-whitespace: 0
+    force-err-cuddling: false
+    force-short-decl-cuddling: false
+    strict-append: true
+linters:
+  enable:
+    - forbidigo
+    - stylecheck
+    - forbidigo
+    - stylecheck
+    - nolintlint
+  disable:
+    - godot
+    - godox
+    - perfsprint
+    - wrapcheck
+    - depguard
+    - protogetter
+  presets:
+    - bugs
+    - comment
+    - error
+    - performance
+    - unused
+  fast: false
+issues:
+  exclude:
+    - "require-error: for error assertions use require"
+    - should provide explanation such as
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    - path: internal/tool/testing/mock_
+      linters:
+        - stylecheck
+    - path: internal/gitaly/vendored
+      linters:
+        - stylecheck
+    - linters:
+        - lll
+      source: "^//go:generate "
+  exclude-use-default: false
+  exclude-case-sensitive: false
+  include:
+    - EXC0002
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+  fix: false
+severity:
+  default-severity: error
+  case-sensitive: false
+  rules:
+    - linters:
+        - dupl
+      severity: info
