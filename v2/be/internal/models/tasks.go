@@ -204,3 +204,74 @@ func (m *TasksModel) Update(ctx context.Context, t *Task) error {
 
 	return nil
 }
+
+func (m *TasksModel) Complete(ctx context.Context, id, userID string) error {
+	query := `UPDATE tasks
+	SET completed = true
+	WHERE id = $1 AND user_id = $2 AND completed = false`
+
+	args := []any{id, userID}
+
+	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:       pgx.Serializable,
+		AccessMode:     pgx.ReadWrite,
+		DeferrableMode: pgx.NotDeferrable,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	result, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() != 1 {
+		return ErrOpFailed
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TasksModel) Delete(ctx context.Context, id, userID string) error {
+	query := `DELETE FROM tasks
+	WHERE id = $1 AND user_id = $2`
+
+	args := []any{id, userID}
+
+	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:       pgx.Serializable,
+		AccessMode:     pgx.ReadWrite,
+		DeferrableMode: pgx.NotDeferrable,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	result, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() != 1 {
+		return ErrOpFailed
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
