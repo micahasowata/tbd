@@ -18,10 +18,11 @@ func (app *application) routes() http.Handler {
 
 		r.Post("/logout", app.logout)
 
-		r.Get("/tasks", app.allTasks)
 		r.Post("/tasks/create", app.createTask)
+		r.Get("/tasks", app.allTasks)
 		r.Get("/tasks/{task_id}", app.getTask)
 		r.Patch("/tasks/{task_id}/update", app.updateTask)
+		r.Patch("/tasks/{task_id}/complete", app.completeTask)
 	})
 	return router
 }

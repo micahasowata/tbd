@@ -168,3 +168,38 @@ func (app *application) updateTask(w http.ResponseWriter, r *http.Request) {
 		app.writeError(w, err)
 	}
 }
+
+func (app *application) completeTask(w http.ResponseWriter, r *http.Request) {
+	id := getTaskID(r)
+	userID := getIDFromCtx(r)
+
+	t, err := app.models.Tasks.GetByID(r.Context(), id, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrRecordNotFound):
+			app.recordNotFoundError(w, err)
+		default:
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	if t.Completed {
+		err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": "task completed"})
+		if err != nil {
+			app.writeError(w, err)
+		}
+		return
+	}
+
+	err = app.models.Tasks.Complete(r.Context(), id, userID)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": t.ID})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}
