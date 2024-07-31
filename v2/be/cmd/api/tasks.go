@@ -1,0 +1,60 @@
+package main
+
+import (
+	"errors"
+	"net/http"
+	"v2/be/internal/db"
+	"v2/be/internal/models"
+	"v2/be/internal/parser"
+	"v2/be/internal/validator"
+)
+
+func (app *application) createTask(w http.ResponseWriter, r *http.Request) {
+	id := getIDFromCtx(r)
+
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	}
+
+	err := parser.Read(w, r, &input)
+	if err != nil {
+		app.readError(w, err)
+		return
+	}
+
+	input.Title = parser.Sanitize(input.Title)
+	input.Description = parser.Sanitize(input.Description)
+
+	v := validator.New()
+	v.RequiredString(input.Title, "title", validator.Required)
+	v.RequiredString(input.Description, "description", validator.Required)
+	if !v.Valid() {
+		app.invalidDataError(w, v.Errors())
+		return
+	}
+
+	t := &models.Task{
+		ID:          db.NewID(),
+		UserID:      id,
+		Title:       input.Title,
+		Description: input.Description,
+		Completed:   false,
+	}
+
+	err = app.models.Tasks.Create(r.Context(), t)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrDuplicateTask):
+			app.dataConflictError(w, err)
+		default:
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	err = parser.Write(w, http.StatusCreated, parser.Envelope{"payload": t.ID})
+	if err != nil {
+		app.writeError(w, err)
+	}
+}

@@ -13,11 +13,15 @@ var (
 
 type Models struct {
 	Users *UsersModel
+	Tasks *TasksModel
 }
 
 func New(pool *pgxpool.Pool) *Models {
 	return &Models{
 		Users: &UsersModel{
+			pool: pool,
+		},
+		Tasks: &TasksModel{
 			pool: pool,
 		},
 	}

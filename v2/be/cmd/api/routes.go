@@ -17,6 +17,8 @@ func (app *application) routes() http.Handler {
 		r.Use(app.requireAuthenticatedUser)
 
 		r.Post("/logout", app.logout)
+
+		r.Post("/tasks/create", app.createTask)
 	})
 	return router
 }
