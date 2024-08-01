@@ -19,21 +19,29 @@ func New() *Validator {
 	}
 }
 
+// Valid ensures that there is no error after validation
 func (v *Validator) Valid() bool {
 	return len(v.errs) == 0
 }
 
+// Errors returns all validation errors
 func (v *Validator) Errors() map[string]string {
 	return v.errs
 }
 
+// AddError adds new error field to the validation errors map
 func (v *Validator) AddError(field, message string) {
+	if v.errs == nil {
+		v.errs = make(map[string]string)
+	}
+
 	_, exist := v.errs[field]
 	if !exist {
 		v.errs[field] = message
 	}
 }
 
+// RequiredString ensures that a string is not empty
 func (v *Validator) RequiredString(s, field, message string) {
 	empty := len(strings.TrimSpace(s)) == 0
 	if empty {
@@ -41,8 +49,9 @@ func (v *Validator) RequiredString(s, field, message string) {
 	}
 }
 
-func (v *Validator) MinString(s string, length int, field string, message string) {
-	lesser := len(strings.TrimSpace(s)) < length
+// MinString ensure that does not contain less characters than min
+func (v *Validator) MinString(s string, min int, field string, message string) {
+	lesser := len(strings.TrimSpace(s)) < min
 	if lesser {
 		v.AddError(field, message)
 	}
