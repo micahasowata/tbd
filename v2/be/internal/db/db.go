@@ -5,11 +5,16 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func New(dsn string) (*pgxpool.Pool, error) {
+type DB interface {
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+}
+
+func New(dsn string) (DB, error) {
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		return nil, err
