@@ -1,38 +1,133 @@
-package models
+package models_test
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"os"
 	"testing"
+	"time"
+	"v2/be/internal/db"
+	"v2/be/internal/models"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
-var dsn = "postgres://root:4713a4cd628778cd1c37a95518f3eaf3@localhost:5432/postgres?sslmode=disable"
+var dsn string
 
-func TestNew(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+func TestMain(m *testing.M) {
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
-	defer pool.Close()
+	// Setup container
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		l.Fatal(err.Error(), zap.Error(err))
+	}
 
-	models := New(pool)
-	require.NotNil(t, models)
-	require.NotNil(t, models.Users)
-	require.NotNil(t, models.Tasks)
-	require.NotNil(t, models.Users.pool)
-	require.NotNil(t, models.Tasks.pool)
-	require.Equal(t, models.Users.pool, pool)
-	require.Equal(t, models.Tasks.pool, pool)
+	err = pool.Client.Ping()
+	if err != nil {
+		l.Fatal(err.Error(), zap.Error(err))
+	}
+
+	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "postgres",
+		Tag:        "16.3-alpine3.20",
+		Env: []string{
+			"POSTGRES_PASSWORD=pa55word",
+			"POSTGRES_USER=tester",
+			"POSTGRES_DB=tdb",
+		},
+	}, func(c *docker.HostConfig) {
+		c.AutoRemove = true
+		c.RestartPolicy = docker.RestartPolicy{
+			Name: "no",
+		}
+	})
+
+	if err != nil {
+		l.Fatal(err.Error(), zap.Error(err))
+	}
+
+	resource.Expire(120)
+
+	pool.MaxWait = 120 * time.Second
+
+	dsn = fmt.Sprintf("postgres://tester:pa55word@localhost:%s/tdb?sslmode=disable", resource.GetPort("5432/tcp"))
+
+	err = pool.Retry(func() error {
+		p, err := pgxpool.New(context.Background(), dsn)
+		if err != nil {
+			return err
+		}
+
+		err = p.Ping(context.Background())
+		if err != nil {
+			return err
+		}
+
+		up, err := os.ReadFile("./testdata/setup.sql")
+		if err != nil {
+			return err
+		}
+
+		_, err = p.Exec(context.Background(), string(up))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		l.Fatal(err.Error(), zap.Error(err))
+	}
+
+	// Run test
+	c := m.Run()
+
+	defer func() {
+		p, err := pgxpool.New(context.Background(), dsn)
+		if err != nil {
+			l.Fatal(err.Error(), zap.Error(err))
+		}
+
+		err = p.Ping(context.Background())
+		if err != nil {
+			l.Fatal(err.Error(), zap.Error(err))
+		}
+
+		down, err := os.ReadFile("./testdata/teardown.sql")
+		if err != nil {
+			l.Fatal(err.Error(), zap.Error(err))
+		}
+
+		_, err = p.Exec(context.Background(), string(down))
+		if err != nil {
+			l.Fatal(err.Error(), zap.Error(err))
+		}
+
+		err = pool.Purge(resource)
+		if err != nil {
+			l.Fatal(err.Error(), zap.Error(err))
+		}
+	}()
+
+	os.Exit(c)
 }
 
-func TestNewWithNilPool(t *testing.T) {
-	models := New(nil)
+func TestNew(t *testing.T) {
+	d, err := db.New(dsn)
+	require.Nil(t, err)
 
-	require.NotNil(t, models)
-	require.NotNil(t, models.Users)
-	require.Nil(t, models.Users.pool)
-	require.NotNil(t, models.Tasks)
-	require.Nil(t, models.Tasks.pool)
+	m := models.New(d)
+
+	require.NotNil(t, m)
+	require.NotEmpty(t, m)
 }

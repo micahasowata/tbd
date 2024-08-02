@@ -2,8 +2,7 @@ package models
 
 import (
 	"errors"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	"v2/be/internal/db"
 )
 
 var (
@@ -16,13 +15,13 @@ type Models struct {
 	Tasks *TasksModel
 }
 
-func New(pool *pgxpool.Pool) *Models {
+func New(db db.DB) *Models {
 	return &Models{
 		Users: &UsersModel{
-			pool: pool,
+			pool: db,
 		},
 		Tasks: &TasksModel{
-			pool: pool,
+			pool: db,
 		},
 	}
 }
