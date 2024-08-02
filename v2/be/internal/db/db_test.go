@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 	"v2/be/internal/db"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -16,15 +17,12 @@ import (
 
 func TestNew(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
-		// setup dockertest
 		pool, err := dockertest.NewPool("")
 		require.Nil(t, err)
 
-		// Ensure docker engine is running
 		err = pool.Client.Ping()
 		require.Nil(t, err)
 
-		// Run container with option to make it instantly removable
 		resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 			Repository: "postgres",
 			Tag:        "16.3-alpine3.20",
@@ -42,26 +40,29 @@ func TestNew(t *testing.T) {
 
 		require.Nil(t, err)
 
+		resource.Expire(120)
+
+		pool.MaxWait = 120 * time.Second
+
 		dsn := fmt.Sprintf("postgresql://tester:pa55word@localhost:%s/tdb?sslmode=disable", resource.GetPort("5432/tcp"))
 
-		// Wait till container is ready for connections
 		err = pool.Retry(func() error {
 			p, err := pgxpool.New(context.Background(), dsn)
 			require.Nil(t, err)
 
 			return p.Ping(context.Background())
 		})
+
 		if err != nil {
 			t.Log(dsn, err.Error())
 		}
+
 		require.Nil(t, err)
 
-		// Test db.New()
 		d, err := db.New(dsn)
 		require.Nil(t, err)
 		require.NotNil(t, d)
 
-		// Remove container
 		defer func() {
 			err := pool.Purge(resource)
 			require.Nil(t, err)
