@@ -1,723 +1,700 @@
-package models
+package models_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
+	"v2/be/internal/db"
+	"v2/be/internal/models"
 
-	"github.com/alexedwards/argon2id"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/require"
 )
 
-func TestTasksModelCreate(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+func TestTasksCreate(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel2 := &UsersModel{pool: pool}
-	tasksModel := &TasksModel{pool: pool}
-
-	t.Run("Successful Create", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel2.Create(context.Background(), user)
-		require.NoError(t, err)
-
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Test Task",
-			Description: "This is a test task",
-			Completed: true,
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
 
-		err = tasksModel.Create(ctx, task)
+		err := users.Create(context.Background(), u)
+		require.NoError(t, err)
+
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.Phrase(),
+			Description: gofakeit.AdjectiveQuantitative(),
+		}
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 	})
 
-	t.Run("Duplicate Task", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("duplicate", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel2.Create(context.Background(), user)
-		require.NoError(t, err)
-
-		task1 := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Duplicate Task",
-			Description: "This task will be duplicated",
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
 
-		err = tasksModel.Create(ctx, task1)
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		task2 := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Duplicate Task",
-			Description: "This is a duplicate task",
+		tasks := &models.TasksModel{Pool: pool}
+		tOne := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       "run",
+			Description: gofakeit.Phrase(),
 		}
 
-		err = tasksModel.Create(ctx, task2)
-		require.ErrorIs(t, err, ErrDuplicateTask)
+		err = tasks.Create(context.Background(), tOne)
+		require.NoError(t, err)
+
+		tTwo := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       "run",
+			Description: gofakeit.Verb(),
+		}
+
+		err = tasks.Create(context.Background(), tTwo)
+		require.NotNil(t, err)
+		require.ErrorIs(t, err, models.ErrDuplicateTask)
 	})
 
-	t.Run("Empty Task", func(t *testing.T) {
-		ctx := context.Background()
-		err := tasksModel.Create(ctx, &Task{})
-		require.Error(t, err)
-	})
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
 
-	t.Run("Empty Title", func(t *testing.T) {
-		ctx := context.Background()
+		pool := testPool(t)
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel2.Create(context.Background(), user)
-		require.NoError(t, err)
-
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "",
-			Description: "Task with empty title",
-		}
-
-		err = tasksModel.Create(ctx, task)
-		require.Error(t, err)
-	})
-
-	t.Run("Empty Description", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel2.Create(context.Background(), user)
-		require.NoError(t, err)
-
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Task with empty description",
-			Description: "",
-		}
-
-		err = tasksModel.Create(ctx, task)
-		require.Error(t, err)
-	})
-
-	t.Run("Cancelled Context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      uuid.New().String(),
-			Title:       "Cancelled Context Task",
-			Description: "This task should not be created",
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      db.NewID(),
+			Title:       gofakeit.HackerVerb(),
+			Description: gofakeit.AppName(),
 		}
 
-		err := tasksModel.Create(ctx, task)
+		err := tasks.Create(ctx, task)
 		require.Error(t, err)
 	})
 }
 
-func TestTasksModelAll(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+func TestTasksAll(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel2 := &UsersModel{pool: pool}
-	tasksModel := &TasksModel{pool: pool}
-
-	t.Run("Successful Retrieval", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel2.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
+		tasks := &models.TasksModel{Pool: pool}
 		for i := 0; i < 3; i++ {
-			task := &Task{
-				ID:          uuid.New().String(),
-				UserID:      user.ID,
-				Title:       fmt.Sprintf("Test Task %d", i+1),
-				Description: fmt.Sprintf("This is test task %d", i+1),
+			task := &models.Task{
+				ID:          db.NewID(),
+				UserID:      u.ID,
+				Title:       gofakeit.VerbTransitive(),
+				Description: gofakeit.Word(),
 			}
-			err = tasksModel.Create(ctx, task)
+			err = tasks.Create(context.Background(), task)
 			require.NoError(t, err)
 		}
 
-		tasks, err := tasksModel.All(ctx, user.ID)
+		ts, err := tasks.All(context.Background(), u.ID)
 		require.NoError(t, err)
-		require.Len(t, tasks, 3)
-		for _, task := range tasks {
-			require.NotEmpty(t, task.ID)
-			require.NotEmpty(t, task.Title)
-			require.NotEmpty(t, task.Description)
-			require.False(t, task.Completed)
+		require.Len(t, ts, 3)
+
+		for _, tt := range ts {
+			require.NotEmpty(t, tt.ID)
+			require.NotEmpty(t, tt.Title)
+			require.NotEmpty(t, tt.Description)
+			require.False(t, tt.Completed)
 		}
 	})
 
-	t.Run("No Tasks Found", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel2.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		tasks, err := tasksModel.All(ctx, user.ID)
-		require.NoError(t, err)
-		require.Empty(t, tasks)
+		tasks := &models.TasksModel{Pool: pool}
+
+		tests := []struct {
+			name string
+			id   string
+		}{
+			{
+				name: "valid user",
+				id:   u.ID,
+			},
+			{
+				name: "invalid user",
+				id:   db.NewID(),
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				ts, err := tasks.All(context.Background(), tt.id)
+				require.NoError(t, err)
+				require.Empty(t, ts)
+			})
+		}
 	})
 
-	t.Run("Invalid User ID", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
 
-		tasks, err := tasksModel.All(ctx, "invalid_user_id")
-		require.NoError(t, err)
-		require.Empty(t, tasks)
-	})
+		pool := testPool(t)
 
-	t.Run("Cancelled Context", func(t *testing.T) {
+		tasks := &models.TasksModel{Pool: pool}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		tasks, err := tasksModel.All(ctx, uuid.New().String())
+		ts, err := tasks.All(ctx, db.NewID())
 		require.Error(t, err)
-		require.Empty(t, tasks)
+		require.Empty(t, ts)
 	})
 }
 
-func TestTasksModelGetByID(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+func TestTasksGetByID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel2 := &UsersModel{pool: pool}
-	tasksModel := &TasksModel{pool: pool}
-
-	t.Run("Successful Retrieval", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel2.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Test Task",
-			Description: "This is a test task",
-			Completed:   false,
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.Verb(),
+			Description: gofakeit.Blurb(),
 		}
-		err = tasksModel.Create(ctx, task)
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 
-		retrievedTask, err := tasksModel.GetByID(ctx, task.ID, user.ID)
+		rt, err := tasks.GetByID(context.Background(), task.ID, u.ID)
 		require.NoError(t, err)
-		require.NotNil(t, retrievedTask)
-		require.Equal(t, task.ID, retrievedTask.ID)
-		require.Equal(t, task.Title, retrievedTask.Title)
-		require.Equal(t, task.Description, retrievedTask.Description)
-		require.Equal(t, task.Completed, retrievedTask.Completed)
+		require.NotNil(t, rt)
+		require.Equal(t, task.ID, rt.ID)
+		require.Equal(t, task.Title, rt.Title)
+		require.Equal(t, task.Description, rt.Description)
+		require.Equal(t, task.Completed, rt.Completed)
 	})
 
-	t.Run("Task Not Found", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("not found", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel2.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		nonExistentTaskID := uuid.New().String()
-		retrievedTask, err := tasksModel.GetByID(ctx, nonExistentTaskID, user.ID)
-		require.Error(t, err)
-		require.Nil(t, retrievedTask)
-		require.ErrorIs(t, err, ErrRecordNotFound)
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.Adverb(),
+			Description: gofakeit.Phrase(),
+		}
+
+		err = tasks.Create(context.Background(), task)
+		require.NoError(t, err)
+
+		tests := []struct {
+			name   string
+			id     string
+			userID string
+		}{
+			{
+				name:   "invalid task",
+				id:     db.NewID(),
+				userID: u.ID,
+			},
+			{
+				name:   "invalid user",
+				id:     task.ID,
+				userID: db.NewID(),
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rt, err := tasks.GetByID(context.Background(), tt.id, tt.userID)
+				require.Error(t, err)
+				require.ErrorIs(t, err, models.ErrRecordNotFound)
+				require.Nil(t, rt)
+			})
+		}
 	})
 
-	t.Run("Invalid User ID", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel2.Create(ctx, user)
-		require.NoError(t, err)
+		tasks := &models.TasksModel{Pool: pool}
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Test Task",
-			Description: "This is a test task",
-			Completed:   false,
-		}
-		err = tasksModel.Create(ctx, task)
-		require.NoError(t, err)
-
-		invalidUserID := uuid.New().String()
-		retrievedTask, err := tasksModel.GetByID(ctx, task.ID, invalidUserID)
-		require.Error(t, err)
-		require.Nil(t, retrievedTask)
-		require.ErrorIs(t, err, ErrRecordNotFound)
-	})
-
-	t.Run("Cancelled Context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		retrievedTask, err := tasksModel.GetByID(ctx, uuid.New().String(), uuid.New().String())
+		rt, err := tasks.GetByID(ctx, db.NewID(), db.NewID())
 		require.Error(t, err)
-		require.Nil(t, retrievedTask)
+		require.Nil(t, rt)
 	})
 }
 
-func TestTasksModelUpdate(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+func TestTasksUpdate(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel2 := &UsersModel{pool: pool}
-	tasksModel := &TasksModel{pool: pool}
-
-	t.Run("Successful Update", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel2.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Original Title",
-			Description: "Original Description",
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.AdjectiveDemonstrative(),
+			Description: gofakeit.AdverbManner(),
 			Completed:   false,
 		}
-		err = tasksModel.Create(ctx, task)
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 
-		updatedTask := &Task{
+		ut := &models.Task{
 			ID:          task.ID,
 			Title:       "Updated Title",
 			Description: "Updated Description",
 		}
 
-		err = tasksModel.Update(ctx, updatedTask)
+		err = tasks.Update(context.Background(), ut)
 		require.NoError(t, err)
 
-		retrievedTask, err := tasksModel.GetByID(ctx, task.ID, user.ID)
+		rt, err := tasks.GetByID(context.Background(), task.ID, u.ID)
 		require.NoError(t, err)
-		require.Equal(t, updatedTask.Title, retrievedTask.Title)
-		require.Equal(t, updatedTask.Description, retrievedTask.Description)
-		require.False(t, retrievedTask.Completed)
+		require.Equal(t, ut.Title, rt.Title)
+		require.Equal(t, ut.Description, rt.Description)
+		require.False(t, rt.Completed)
 	})
 
-	t.Run("Update Completed Task", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("completed", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel2.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Completed Task",
-			Description: "This task is completed",
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.Animal(),
+			Description: gofakeit.Question(),
 			Completed:   true,
 		}
-		err = tasksModel.Create(ctx, task)
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 
-		updatedTask := &Task{
+		ut := &models.Task{
 			ID:          task.ID,
-			Title:       "Updated Completed Task",
-			Description: "This update should fail",
+			Title:       gofakeit.AdjectiveIndefinite(),
+			Description: gofakeit.Quote(),
 		}
 
-		err = tasksModel.Update(ctx, updatedTask)
-		require.ErrorIs(t, err, ErrOpFailed)
+		err = tasks.Update(context.Background(), ut)
+		require.ErrorIs(t, err, models.ErrOpFailed)
 	})
 
-	t.Run("Update Non-existent Task", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("invalid task", func(t *testing.T) {
+		t.Parallel()
 
-		nonExistentTask := &Task{
-			ID:          uuid.New().String(),
-			Title:       "Non-existent Task",
-			Description: "This task doesn't exist",
+		pool := testPool(t)
+
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			Title:       gofakeit.Adverb(),
+			Description: gofakeit.Quote(),
 		}
 
-		err := tasksModel.Update(ctx, nonExistentTask)
-		require.ErrorIs(t, err, ErrOpFailed)
+		err := tasks.Update(context.Background(), task)
+		require.ErrorIs(t, err, models.ErrOpFailed)
 	})
 
-	t.Run("Update to Duplicate Title", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("duplicate title", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel2.Create(ctx, user)
-		require.NoError(t, err)
-
-		task1 := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Existing Task",
-			Description: "This is an existing task",
-		}
-		err = tasksModel.Create(ctx, task1)
-		require.NoError(t, err)
-
-		task2 := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Task to Update",
-			Description: "This task will be updated",
-		}
-		err = tasksModel.Create(ctx, task2)
-		require.NoError(t, err)
-
-		updatedTask := &Task{
-			ID:          task2.ID,
-			Title:       "Existing Task",
-			Description: "This update should fail due to duplicate title",
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
 
-		err = tasksModel.Update(ctx, updatedTask)
-		require.ErrorIs(t, err, ErrDuplicateTask)
+		err := users.Create(context.Background(), u)
+		require.NoError(t, err)
+
+		tasks := &models.TasksModel{Pool: pool}
+		tOne := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.Adjective(),
+			Description: gofakeit.Quote(),
+		}
+
+		err = tasks.Create(context.Background(), tOne)
+		require.NoError(t, err)
+
+		tTwo := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.VerbHelping(),
+			Description: gofakeit.Animal(),
+		}
+
+		err = tasks.Create(context.Background(), tTwo)
+		require.NoError(t, err)
+
+		ut := &models.Task{
+			ID:          tTwo.ID,
+			Title:       tOne.Title,
+			Description: gofakeit.AdjectiveProper(),
+		}
+
+		err = tasks.Update(context.Background(), ut)
+		require.ErrorIs(t, err, models.ErrDuplicateTask)
 	})
 
-	t.Run("Cancelled Context", func(t *testing.T) {
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
+
+		pool := testPool(t)
+
+		tasks := &models.TasksModel{Pool: pool}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			Title:       "Cancelled Context Task",
-			Description: "This update should fail",
+		task := &models.Task{
+			ID:          db.NewID(),
+			Title:       gofakeit.BookTitle(),
+			Description: gofakeit.Blurb(),
 		}
 
-		err := tasksModel.Update(ctx, task)
+		err := tasks.Update(ctx, task)
 		require.Error(t, err)
 	})
 }
 
-func TestTasksModelComplete(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+func TestTasksComplete(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel := &UsersModel{pool: pool}
-	tasksModel := &TasksModel{pool: pool}
-
-	t.Run("Successful Completion", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Test Task",
-			Description: "This is a test task",
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.BookTitle(),
+			Description: gofakeit.Phrase(),
 			Completed:   false,
 		}
-		err = tasksModel.Create(ctx, task)
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 
-		err = tasksModel.Complete(ctx, task.ID, user.ID)
+		err = tasks.Complete(context.Background(), task.ID, u.ID)
 		require.NoError(t, err)
 
-		completedTask, err := tasksModel.GetByID(ctx, task.ID, user.ID)
+		ct, err := tasks.GetByID(context.Background(), task.ID, u.ID)
 		require.NoError(t, err)
-		require.True(t, completedTask.Completed)
+		require.True(t, ct.Completed)
 	})
 
-	t.Run("Complete Already Completed Task", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("completed task", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Already Completed Task",
-			Description: "This task is already completed",
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.AppName(),
+			Description: gofakeit.Phrase(),
 			Completed:   true,
 		}
-		err = tasksModel.Create(ctx, task)
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 
-		err = tasksModel.Complete(ctx, task.ID, user.ID)
-		require.ErrorIs(t, err, ErrOpFailed)
+		err = tasks.Complete(context.Background(), task.ID, u.ID)
+		require.ErrorIs(t, err, models.ErrOpFailed)
 	})
 
-	t.Run("Complete Non-existent Task", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("invalid task", func(t *testing.T) {
+		t.Parallel()
 
-		nonExistentTaskID := uuid.New().String()
-		userID := uuid.New().String()
+		pool := testPool(t)
 
-		err := tasksModel.Complete(ctx, nonExistentTaskID, userID)
-		require.ErrorIs(t, err, ErrOpFailed)
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
+		}
+
+		err := users.Create(context.Background(), u)
+		require.NoError(t, err)
+
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.BookTitle(),
+			Description: gofakeit.Phrase(),
+		}
+
+		err = tasks.Create(context.Background(), task)
+		require.NoError(t, err)
+
+		tests := []struct {
+			name   string
+			id     string
+			userID string
+		}{
+			{
+				name:   "non-existent task",
+				id:     db.NewID(),
+				userID: u.ID,
+			},
+			{
+				name:   "non-existent user",
+				id:     task.ID,
+				userID: db.NewID(),
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := tasks.Complete(context.Background(), tt.id, tt.userID)
+				require.ErrorIs(t, err, models.ErrOpFailed)
+
+			})
+		}
 	})
 
-	t.Run("Complete Task with Wrong User ID", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
 
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
+		pool := testPool(t)
 
-		user1 := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser1_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel.Create(ctx, user1)
-		require.NoError(t, err)
+		tasks := &models.TasksModel{Pool: pool}
 
-		user2 := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser2_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel.Create(ctx, user2)
-		require.NoError(t, err)
-
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user1.ID,
-			Title:       "User1's Task",
-			Description: "This task belongs to user1",
-			Completed:   false,
-		}
-		err = tasksModel.Create(ctx, task)
-		require.NoError(t, err)
-
-		err = tasksModel.Complete(ctx, task.ID, user2.ID)
-		require.ErrorIs(t, err, ErrOpFailed)
-	})
-
-	t.Run("Cancelled Context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		err := tasksModel.Complete(ctx, uuid.New().String(), uuid.New().String())
+		err := tasks.Complete(ctx, db.NewID(), db.NewID())
 		require.Error(t, err)
 	})
 }
 
 func TestTasksModelDelete(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel := &UsersModel{pool: pool}
-	tasksModel := &TasksModel{pool: pool}
-
-	t.Run("Successful Delete", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel.Create(ctx, user)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			Title:       "Test Task",
-			Description: "This is a test task",
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.BookTitle(),
+			Description: gofakeit.Phrase(),
 			Completed:   false,
 		}
-		err = tasksModel.Create(ctx, task)
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 
-		err = tasksModel.Delete(ctx, task.ID, user.ID)
+		err = tasks.Delete(context.Background(), task.ID, u.ID)
 		require.NoError(t, err)
 
-		_, err = tasksModel.GetByID(ctx, task.ID, user.ID)
-		require.ErrorIs(t, err, ErrRecordNotFound)
+		task, err = tasks.GetByID(context.Background(), task.ID, u.ID)
+		require.ErrorIs(t, err, models.ErrRecordNotFound)
+		require.Nil(t, task)
 	})
 
-	t.Run("Delete Non-existent Task", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("non-existent task", func(t *testing.T) {
+		t.Parallel()
 
-		nonExistentTaskID := uuid.New().String()
-		userID := uuid.New().String()
+		pool := testPool(t)
 
-		err := tasksModel.Delete(ctx, nonExistentTaskID, userID)
-		require.ErrorIs(t, err, ErrOpFailed)
-	})
-
-	t.Run("Delete Task with Wrong User ID", func(t *testing.T) {
-		ctx := context.Background()
-
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user1 := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser1_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
-		err = usersModel.Create(ctx, user1)
+
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		user2 := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser2_%s", time.Now().String()),
-			Password: []byte(hash),
-		}
-		err = usersModel.Create(ctx, user2)
-		require.NoError(t, err)
-
-		task := &Task{
-			ID:          uuid.New().String(),
-			UserID:      user1.ID,
-			Title:       "User1's Task",
-			Description: "This task belongs to user1",
+		tasks := &models.TasksModel{Pool: pool}
+		task := &models.Task{
+			ID:          db.NewID(),
+			UserID:      u.ID,
+			Title:       gofakeit.BookTitle(),
+			Description: gofakeit.Phrase(),
 			Completed:   false,
 		}
-		err = tasksModel.Create(ctx, task)
+
+		err = tasks.Create(context.Background(), task)
 		require.NoError(t, err)
 
-		err = tasksModel.Delete(ctx, task.ID, user2.ID)
-		require.ErrorIs(t, err, ErrOpFailed)
+		tests := []struct {
+			name   string
+			id     string
+			userID string
+		}{
+			{
+				name:   "invalid user",
+				id:     task.ID,
+				userID: db.NewID(),
+			},
+			{
+				name:   "invalid task",
+				id:     db.NewID(),
+				userID: u.ID,
+			},
+		}
 
-		// Verify the task still exists
-		_, err = tasksModel.GetByID(ctx, task.ID, user1.ID)
-		require.NoError(t, err)
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := tasks.Delete(context.Background(), tt.id, tt.userID)
+				require.ErrorIs(t, err, models.ErrOpFailed)
+			})
+		}
 	})
 
-	t.Run("Cancelled Context", func(t *testing.T) {
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
+
+		pool := testPool(t)
+
+		tasks := &models.TasksModel{Pool: pool}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		err := tasksModel.Delete(ctx, uuid.New().String(), uuid.New().String())
+		err := tasks.Delete(ctx, db.NewID(), db.NewID())
 		require.Error(t, err)
 	})
 }

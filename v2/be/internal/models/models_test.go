@@ -10,6 +10,7 @@ import (
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -17,7 +18,23 @@ import (
 	"go.uber.org/zap"
 )
 
+// dsn stores connection dsn for the models test package
 var dsn string
+
+func testPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+
+	pool, err := db.New(dsn)
+	require.NoError(t, err)
+	require.Nil(t, err)
+
+	return pool
+}
+
+func testUserPassword(t *testing.T) string {
+	t.Helper()
+	return gofakeit.Password(true, true, true, false, false, 12)
+}
 
 func TestMain(m *testing.M) {
 	l, err := zap.NewDevelopment()
