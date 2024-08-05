@@ -20,9 +20,17 @@ type User struct {
 	Password []byte `json:"-"`
 }
 
+type Users interface {
+	Create(ctx context.Context, u *User) error
+	GetByUsername(ctx context.Context, username string) (*User, error)
+	Exists(ctx context.Context, id string) (bool, error)
+}
+
 type UsersModel struct {
 	Pool *pgxpool.Pool
 }
+
+var _ (Users) = (*UsersModel)(nil)
 
 func (m *UsersModel) Create(ctx context.Context, u *User) error {
 	query := `INSERT INTO users (id, username, password)
