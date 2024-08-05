@@ -12,8 +12,8 @@ var (
 )
 
 type Models struct {
-	Users Users
-	Tasks Tasks
+	Users *UsersModel
+	Tasks *TasksModel
 }
 
 func New(pool *pgxpool.Pool) *Models {
