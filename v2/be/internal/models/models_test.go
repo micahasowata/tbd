@@ -3,7 +3,6 @@ package models_test
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -37,10 +36,7 @@ func testUserPassword(t *testing.T) string {
 }
 
 func TestMain(m *testing.M) {
-	l, err := zap.NewDevelopment()
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	l := zap.NewNop()
 
 	// Setup container
 	pool, err := dockertest.NewPool("")
