@@ -20,8 +20,33 @@ func writeError(w http.ResponseWriter) {
 func ServerError(w http.ResponseWriter, logger *zap.Logger, err error) {
 	logError(logger, err)
 
-	perr := parser.Write(w, http.StatusInternalServerError, parser.Envelope{"error": "request could no longer be processed"})
-	if perr != nil {
+	err = parser.Write(w, http.StatusInternalServerError, parser.Envelope{"error": "request could no longer be processed"})
+	if err != nil {
+		writeError(w)
+	}
+}
+
+func ReadError(w http.ResponseWriter, logger *zap.Logger, err error) {
+	logError(logger, err)
+
+	err = parser.Write(w, http.StatusBadRequest, parser.Envelope{"error": err.Error()})
+	if err != nil {
+		writeError(w)
+	}
+}
+
+func InvalidDataError(w http.ResponseWriter, errs map[string]string) {
+	err := parser.Write(w, http.StatusUnprocessableEntity, parser.Envelope{"error": errs})
+	if err != nil {
+		writeError(w)
+	}
+}
+
+func DuplicateDataError(w http.ResponseWriter, logger *zap.Logger, err error) {
+	logError(logger, err)
+
+	err = parser.Write(w, http.StatusConflict, parser.Envelope{"error": err.Error()})
+	if err != nil {
 		writeError(w)
 	}
 }
