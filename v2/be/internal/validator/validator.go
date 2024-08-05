@@ -1,6 +1,10 @@
 package validator
 
-import "strings"
+import (
+	"strings"
+
+	pv "github.com/wagslane/go-password-validator"
+)
 
 const (
 	MinPasswordLength  = 8
@@ -54,5 +58,13 @@ func (v *Validator) MinString(s string, min int, field string, message string) {
 	lesser := len(strings.TrimSpace(s)) < min
 	if lesser {
 		v.AddError(field, message)
+	}
+}
+
+// CheckPassword validates password strength
+func (v *Validator) CheckPassword(password string, field string) {
+	err := pv.Validate(password, MinPasswordEntropy)
+	if err != nil {
+		v.AddError(field, err.Error())
 	}
 }

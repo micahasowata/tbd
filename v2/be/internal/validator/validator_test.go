@@ -91,6 +91,8 @@ func TestMinString(t *testing.T) {
 
 func TestAddError(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
+		t.Parallel()
+
 		v := validator.New()
 		v.AddError("input", validator.Required)
 
@@ -100,6 +102,8 @@ func TestAddError(t *testing.T) {
 	})
 
 	t.Run("field exists", func(t *testing.T) {
+		t.Parallel()
+
 		v := validator.New()
 		v.AddError("username", validator.Required)
 		v.AddError("username", "must be at least 4 characters")
@@ -111,9 +115,35 @@ func TestAddError(t *testing.T) {
 	})
 
 	t.Run("nil errs", func(t *testing.T) {
+		t.Parallel()
+
 		v := &validator.Validator{}
 		v.AddError("input", validator.Required)
 
 		require.NotNil(t, v.Errors())
+	})
+}
+
+func TestCheckPassword(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		input := "E}bY^8ifURXC"
+
+		v := validator.New()
+		v.CheckPassword(input, "password")
+
+		require.True(t, v.Valid())
+	})
+
+	t.Run("insecure", func(t *testing.T) {
+		t.Parallel()
+
+		input := "mynameis"
+
+		v := validator.New()
+		v.CheckPassword(input, "password")
+
+		require.False(t, v.Valid())
+		require.Contains(t, v.Errors(), "password")
 	})
 }
