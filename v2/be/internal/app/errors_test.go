@@ -79,3 +79,20 @@ func TestDuplicateDataError(t *testing.T) {
 
 	require.Contains(t, body, "duplicate data")
 }
+
+func TestMissingDataError(t *testing.T) {
+	t.Parallel()
+
+	rr := httptest.NewRecorder()
+	logger := zap.NewNop()
+
+	app.MissingDataError(rr, logger, errors.New("missing data"))
+	require.Equal(t, http.StatusNotFound, rr.Code)
+
+	rs := rr.Result()
+	defer rs.Body.Close()
+
+	body := readTestBody(t, rs.Body)
+
+	require.Contains(t, body, "missing data")
+}

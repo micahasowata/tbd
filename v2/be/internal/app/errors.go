@@ -50,3 +50,12 @@ func DuplicateDataError(w http.ResponseWriter, logger *zap.Logger, err error) {
 		writeError(w)
 	}
 }
+
+func MissingDataError(w http.ResponseWriter, logger *zap.Logger, err error) {
+	logError(logger, err)
+
+	err = parser.Write(w, http.StatusNotFound, parser.Envelope{"error": err.Error()})
+	if err != nil {
+		writeError(w)
+	}
+}
