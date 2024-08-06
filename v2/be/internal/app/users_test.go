@@ -32,7 +32,9 @@ func TestHandleSignup(t *testing.T) {
 			WithJSON(body).
 			Expect().
 			Status(http.StatusCreated).
-			JSON().Object().ContainsKey("payload")
+			HasContentType("application/json").
+			Cookie("session").
+			HasMaxAge().Path().NotEmpty()
 	})
 
 	t.Run("errors", func(t *testing.T) {
@@ -75,6 +77,80 @@ func TestHandleSignup(t *testing.T) {
 				e.POST("/signup").
 					WithJSON(tt.body).
 					Expect().
+					Status(tt.code).
+					HasContentType("application/json")
+			})
+		}
+	})
+}
+
+func TestHandleLogin(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		logger := zap.NewNop()
+		sessions := scs.New()
+		body := map[string]string{"username": "alex", "password": "0~,9ZZArDp#M"}
+		h := app.HandleLogin(logger, sessions, testdata.NewUM())
+
+		ts := httptest.NewServer(sessions.LoadAndSave(h))
+		defer ts.Close()
+
+		e := httpexpect.Default(t, ts.URL)
+
+		e.POST("/login").
+			WithJSON(body).
+			Expect().
+			Status(http.StatusOK).
+			HasContentType("application/json").
+			Cookie("session").HasMaxAge().Path().IsEqual("/")
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		tests := []struct {
+			name string
+			body map[string]string
+			code int
+		}{
+			{
+				name: "bad data",
+				body: map[string]string{"name": "tester"},
+				code: http.StatusBadRequest,
+			},
+			{
+				name: "invalid data",
+				body: map[string]string{"username": "entre", "password": "iloveyou"},
+				code: http.StatusUnprocessableEntity,
+			},
+			{
+				name: "invalid user",
+				body: map[string]string{"username": "tester", "password": "0~,9ZZArDp#M"},
+				code: http.StatusNotFound,
+			},
+			{
+				name: "invalid password",
+				body: map[string]string{"username": "kolo", "password": "0~,9ZZArDp#N"},
+				code: http.StatusNotFound,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				sessions := scs.New()
+
+				h := app.HandleLogin(zap.NewNop(), sessions, testdata.NewUM())
+
+				ts := httptest.NewServer(sessions.LoadAndSave(h))
+				defer ts.Close()
+
+				e := httpexpect.Default(t, ts.URL)
+
+				e.POST("/login").
+					WithJSON(tt.body).
+					Expect().
+					HasContentType("application/json").
 					Status(tt.code)
 			})
 		}

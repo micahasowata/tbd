@@ -15,5 +15,6 @@ func Routes(sessions *scs.SessionManager, logger *zap.Logger, u *models.UsersMod
 
 	router.Get("/", HandleHealthz())
 	router.Post("/signup", HandleSignup(logger, sessions, u))
+	router.Post("/login", HandleLogin(logger, sessions, u))
 	return router
 }
