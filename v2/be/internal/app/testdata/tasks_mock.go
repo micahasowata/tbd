@@ -37,3 +37,18 @@ func (m *TM) All(ctx context.Context, userID string) ([]*models.Task, error) {
 
 	return []*models.Task{t}, nil
 }
+
+func (m *TM) GetByID(ctx context.Context, id, userID string) (*models.Task, error) {
+	if id == "1" || userID == "1" {
+		return nil, models.ErrRecordNotFound
+	}
+
+	t := &models.Task{
+		ID:          id,
+		UserID:      userID,
+		Title:       gofakeit.BookTitle(),
+		Description: gofakeit.Blurb(),
+	}
+
+	return t, nil
+}

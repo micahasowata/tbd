@@ -93,3 +93,32 @@ func HandleListTasks(logger *zap.Logger, tl TaskLister) http.HandlerFunc {
 		}
 	})
 }
+
+type TaskGetter interface {
+	GetByID(ctx context.Context, id, userID string) (*models.Task, error)
+}
+
+func HandleGetTask(logger *zap.Logger, tg TaskGetter) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetTaskID(r)
+		userID := GetUserID(r)
+
+		logger.Info(id)
+
+		t, err := tg.GetByID(r.Context(), id, userID)
+		if err != nil {
+			switch {
+			case errors.Is(err, models.ErrRecordNotFound):
+				MissingDataError(w, logger, err)
+			default:
+				ServerError(w, logger, err)
+			}
+			return
+		}
+
+		err = parser.Write(w, http.StatusFound, parser.Envelope{"payload": t})
+		if err != nil {
+			writeError(w)
+		}
+	})
+}

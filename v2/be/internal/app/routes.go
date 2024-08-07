@@ -29,6 +29,7 @@ func Routes(
 
 		r.Post("/create", HandleCreateTask(logger, t))
 		r.Get("/all", HandleListTasks(logger, t))
+		r.Get("/tasks/{task_id}", HandleGetTask(logger, t))
 	})
 	return router
 }
