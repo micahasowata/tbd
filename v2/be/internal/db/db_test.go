@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
 	"v2/be/internal/db"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -52,7 +53,6 @@ func TestNew(t *testing.T) {
 
 			return p.Ping(context.Background())
 		})
-
 		if err != nil {
 			t.Log(dsn, err.Error())
 		}

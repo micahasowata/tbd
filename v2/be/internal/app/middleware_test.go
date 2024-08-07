@@ -1,9 +1,11 @@
 package app_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
 	"v2/be/internal/app"
 	"v2/be/internal/app/testdata"
 	"v2/be/internal/db"
@@ -14,6 +16,8 @@ import (
 )
 
 const authenticatedUser = "authenticatedUser"
+
+var userID = app.CtxKey("userID")
 
 func TestRequireAuthenticatedUser(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
@@ -105,4 +109,19 @@ func TestRequireAuthenticatedUser(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestGetUserID(t *testing.T) {
+	t.Parallel()
+
+	id := db.NewID()
+
+	ctx := context.WithValue(context.Background(), userID, id)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+
+	r = r.WithContext(ctx)
+
+	uid := app.GetUserID(r)
+
+	require.Equal(t, id, uid)
 }

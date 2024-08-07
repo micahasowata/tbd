@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"strings"
+
 	"v2/be/internal/db"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	ErrDuplicateTask = errors.New("task exist")
-)
+var ErrDuplicateTask = errors.New("task exist")
 
 type Task struct {
 	ID          string `json:"id"`
@@ -35,8 +34,6 @@ type TasksModel struct {
 	Pool *pgxpool.Pool
 }
 
-var _ (Tasks) = (*TasksModel)(nil)
-
 func (m *TasksModel) Create(ctx context.Context, t *Task) error {
 	query := `INSERT INTO tasks (id, user_id, title, description, completed)
 	VALUES ($1, $2, $3, $4, $5)`
@@ -48,7 +45,6 @@ func (m *TasksModel) Create(ctx context.Context, t *Task) error {
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -87,7 +83,6 @@ func (m *TasksModel) All(ctx context.Context, userID string) ([]*Task, error) {
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +137,6 @@ func (m *TasksModel) GetByID(ctx context.Context, id, userID string) (*Task, err
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +151,6 @@ func (m *TasksModel) GetByID(ctx context.Context, id, userID string) (*Task, err
 		&t.Description,
 		&t.Completed,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -187,7 +180,6 @@ func (m *TasksModel) Update(ctx context.Context, t *Task) error {
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -228,7 +220,6 @@ func (m *TasksModel) Complete(ctx context.Context, id, userID string) error {
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -263,7 +254,6 @@ func (m *TasksModel) Delete(ctx context.Context, id, userID string) error {
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}

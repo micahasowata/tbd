@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 	"time"
+
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 
@@ -63,7 +64,6 @@ func TestMain(m *testing.M) {
 			Name: "no",
 		}
 	})
-
 	if err != nil {
 		l.Fatal(err.Error(), zap.Error(err))
 	}
@@ -97,7 +97,6 @@ func TestMain(m *testing.M) {
 
 		return nil
 	})
-
 	if err != nil {
 		l.Fatal(err.Error(), zap.Error(err))
 	}

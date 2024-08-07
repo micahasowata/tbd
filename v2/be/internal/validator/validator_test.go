@@ -2,6 +2,7 @@ package validator_test
 
 import (
 	"testing"
+
 	"v2/be/internal/validator"
 
 	"github.com/stretchr/testify/require"

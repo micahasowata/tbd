@@ -20,7 +20,7 @@ const authenticatedUser = "authenticatedUser"
 
 var (
 	ErrUnauthorized = errors.New("must be an authenticated user")
-	userID          = CtxKey("user_id")
+	userID          = CtxKey("userID")
 )
 
 // RequireAuthenticatedUser returns a function that satisfies the chi middleware pattern
@@ -56,4 +56,8 @@ func RequireAuthenticatedUser(logger *zap.Logger, sessions *scs.SessionManager, 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func GetUserID(r *http.Request) string {
+	return r.Context().Value(userID).(string)
 }

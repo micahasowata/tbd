@@ -3,6 +3,7 @@ package models_test
 import (
 	"context"
 	"testing"
+
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 
@@ -576,7 +577,6 @@ func TestTasksComplete(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				err := tasks.Complete(context.Background(), tt.id, tt.userID)
 				require.ErrorIs(t, err, models.ErrOpFailed)
-
 			})
 		}
 	})

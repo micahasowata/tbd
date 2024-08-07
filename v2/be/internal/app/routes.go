@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+
 	"v2/be/internal/models"
 
 	"github.com/alexedwards/scs/v2"
@@ -9,7 +10,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func Routes(sessions *scs.SessionManager, logger *zap.Logger, u *models.UsersModel) http.Handler {
+func Routes(
+	sessions *scs.SessionManager,
+	logger *zap.Logger,
+	u *models.UsersModel,
+	t *models.TasksModel,
+) http.Handler {
 	router := chi.NewRouter()
 	router.Use(sessions.LoadAndSave)
 

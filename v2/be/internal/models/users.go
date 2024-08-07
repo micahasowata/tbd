@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"strings"
+
 	"v2/be/internal/db"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	ErrDuplicateUsername = errors.New("username exists")
-)
+var ErrDuplicateUsername = errors.New("username exists")
 
 type User struct {
 	ID       string `json:"id"`
@@ -35,7 +34,6 @@ func (m *UsersModel) Create(ctx context.Context, u *User) error {
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -74,7 +72,6 @@ func (m *UsersModel) GetByUsername(ctx context.Context, username string) (*User,
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +83,6 @@ func (m *UsersModel) GetByUsername(ctx context.Context, username string) (*User,
 		&u.ID,
 		&u.Password,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -112,7 +108,6 @@ func (m *UsersModel) Exists(ctx context.Context, id string) (bool, error) {
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return false, err
 	}
