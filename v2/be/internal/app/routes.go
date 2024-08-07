@@ -28,6 +28,7 @@ func Routes(
 		r.Post("/logout", HandleLogout(logger, sessions))
 
 		r.Post("/create", HandleCreateTask(logger, t))
+		r.Get("/all", HandleListTasks(logger, t))
 	})
 	return router
 }

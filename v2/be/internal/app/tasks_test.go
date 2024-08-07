@@ -82,3 +82,43 @@ func TestHandleCreateTask(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleListTasks(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		session := scs.New()
+		h := app.HandleListTasks(zap.NewNop(), testdata.NewTM())
+		m := lsm(t, session, db.NewID())
+
+		ts := httptest.NewServer(session.LoadAndSave(m(h)))
+		defer ts.Close()
+
+		e := httpexpect.Default(t, ts.URL)
+
+		e.GET("/all").
+			Expect().
+			Status(http.StatusOK).
+			HasContentType("application/json").
+			JSON().Object().Value("payload").Array().NotEmpty()
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		t.Parallel()
+
+		session := scs.New()
+		h := app.HandleListTasks(zap.NewNop(), testdata.NewTM())
+		m := lsm(t, session, "1")
+
+		ts := httptest.NewServer(session.LoadAndSave(m(h)))
+		defer ts.Close()
+
+		e := httpexpect.Default(t, ts.URL)
+
+		e.GET("/all").
+			Expect().
+			Status(http.StatusOK).
+			HasContentType("application/json").
+			JSON().Object().Value("payload").Array().IsEmpty()
+	})
+}

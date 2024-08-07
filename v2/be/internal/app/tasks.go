@@ -68,3 +68,28 @@ func HandleCreateTask(logger *zap.Logger, tc TaskCreater) http.HandlerFunc {
 		}
 	})
 }
+
+type TaskLister interface {
+	All(ctx context.Context, userID string) ([]*models.Task, error)
+}
+
+func HandleListTasks(logger *zap.Logger, tl TaskLister) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetUserID(r)
+
+		tasks, err := tl.All(r.Context(), id)
+		if err != nil {
+			ServerError(w, logger, err)
+			return
+		}
+
+		if tasks == nil {
+			tasks = []*models.Task{}
+		}
+
+		err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": tasks})
+		if err != nil {
+			writeError(w)
+		}
+	})
+}
