@@ -20,6 +20,8 @@ const authenticatedUser = "authenticatedUser"
 var userID = app.CtxKey("userID")
 
 func setSession(t *testing.T, sessions *scs.SessionManager, ctx context.Context, val string) context.Context {
+	t.Helper()
+
 	ctx, err := sessions.Load(ctx, authenticatedUser)
 	require.NoError(t, err)
 
@@ -29,6 +31,21 @@ func setSession(t *testing.T, sessions *scs.SessionManager, ctx context.Context,
 	require.NoError(t, err)
 
 	return ctx
+}
+
+func lsm(t *testing.T, session *scs.SessionManager, value string) func(next http.Handler) http.Handler {
+	t.Helper()
+
+	return func(next http.Handler) http.Handler {
+		return session.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			session.Put(r.Context(), authenticatedUser, value)
+
+			ctx := context.WithValue(r.Context(), userID, value)
+			r = r.WithContext(ctx)
+
+			next.ServeHTTP(w, r)
+		}))
+	}
 }
 
 func TestRequireAuthenticatedUser(t *testing.T) {
