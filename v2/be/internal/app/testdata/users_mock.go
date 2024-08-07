@@ -39,3 +39,11 @@ func (m *UM) GetByUsername(ctx context.Context, username string) (*models.User, 
 		Password: []byte(hash),
 	}, nil
 }
+
+func (m *UM) Exists(ctx context.Context, id string) (bool, error) {
+	if id == "1" {
+		return false, nil
+	}
+
+	return true, nil
+}
