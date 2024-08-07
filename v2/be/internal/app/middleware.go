@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -60,4 +61,8 @@ func RequireAuthenticatedUser(logger *zap.Logger, sessions *scs.SessionManager, 
 
 func GetUserID(r *http.Request) string {
 	return r.Context().Value(userID).(string)
+}
+
+func GetTaskID(r *http.Request) string {
+	return chi.URLParam(r, "task_id")
 }

@@ -11,6 +11,7 @@ import (
 	"v2/be/internal/db"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -141,4 +142,36 @@ func TestGetUserID(t *testing.T) {
 	uid := app.GetUserID(r)
 
 	require.Equal(t, id, uid)
+}
+
+func TestGetTaskID(t *testing.T) {
+	t.Parallel()
+
+	id := db.NewID()
+
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/{task_id}", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("task_id", id)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, rctx)
+
+	r = r.WithContext(ctx)
+
+	h := func(w http.ResponseWriter, r *http.Request) {
+		tid := app.GetTaskID(r)
+		w.Write([]byte(tid))
+	}
+
+	h(rr, r)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	rs := rr.Result()
+	defer rs.Body.Close()
+
+	body := readTestBody(t, rs.Body)
+
+	require.Equal(t, id, body)
 }
