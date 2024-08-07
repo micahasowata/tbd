@@ -96,3 +96,19 @@ func TestMissingDataError(t *testing.T) {
 
 	require.Contains(t, body, "missing data")
 }
+
+func TestUnauthorizedError(t *testing.T) {
+	t.Parallel()
+
+	rr := httptest.NewRecorder()
+
+	app.UnauthorizedAccessError(rr, zap.NewNop(), errors.New("unauthorized access"))
+	require.Equal(t, http.StatusUnauthorized, rr.Code)
+
+	rs := rr.Result()
+	defer rs.Body.Close()
+
+	body := readTestBody(t, rs.Body)
+
+	require.Contains(t, body, "unauthorized access")
+}

@@ -59,3 +59,12 @@ func MissingDataError(w http.ResponseWriter, logger *zap.Logger, err error) {
 		writeError(w)
 	}
 }
+
+func UnauthorizedAccessError(w http.ResponseWriter, logger *zap.Logger, err error) {
+	logError(logger, err)
+
+	err = parser.Write(w, http.StatusUnauthorized, parser.Envelope{"error": err.Error()})
+	if err != nil {
+		writeError(w)
+	}
+}
