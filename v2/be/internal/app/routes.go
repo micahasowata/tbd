@@ -25,6 +25,9 @@ func Routes(
 
 	router.Group(func(r chi.Router) {
 		r.Use(RequireAuthenticatedUser(logger, sessions, u))
+		r.Post("/logout", HandleLogout(logger, sessions))
+
+		r.Post("/create", HandleCreateTask(logger, t))
 	})
 	return router
 }

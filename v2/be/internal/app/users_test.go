@@ -1,17 +1,32 @@
 package app_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"v2/be/internal/app"
 	"v2/be/internal/app/testdata"
+	"v2/be/internal/db"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/gavv/httpexpect/v2"
 	"go.uber.org/zap"
 )
+
+func lsm(session *scs.SessionManager, value string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return session.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			session.Put(r.Context(), authenticatedUser, value)
+
+			ctx := context.WithValue(r.Context(), userID, value)
+			r = r.WithContext(ctx)
+
+			next.ServeHTTP(w, r)
+		}))
+	}
+}
 
 func TestHandleSignup(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
@@ -156,4 +171,23 @@ func TestHandleLogin(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestHandleLogout(t *testing.T) {
+	t.Parallel()
+
+	sessions := scs.New()
+
+	h := app.HandleLogout(zap.NewNop(), sessions)
+	m := lsm(sessions, db.NewID())
+
+	ts := httptest.NewServer(sessions.LoadAndSave(m(h)))
+	defer ts.Close()
+
+	e := httpexpect.Default(t, ts.URL)
+
+	e.POST("/logout").
+		Expect().
+		HasContentType("application/json").
+		Status(http.StatusOK)
 }

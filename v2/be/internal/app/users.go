@@ -146,3 +146,22 @@ func HandleLogin(logger *zap.Logger, sessions *scs.SessionManager, ug UserGetter
 		}
 	})
 }
+
+func HandleLogout(logger *zap.Logger, sessions *scs.SessionManager) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetUserID(r)
+
+		err := sessions.RenewToken(r.Context())
+		if err != nil {
+			ServerError(w, logger, err)
+			return
+		}
+
+		sessions.Remove(r.Context(), authenticatedUser)
+
+		err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": id})
+		if err != nil {
+			writeError(w)
+		}
+	})
+}

@@ -19,6 +19,18 @@ const authenticatedUser = "authenticatedUser"
 
 var userID = app.CtxKey("userID")
 
+func setSession(t *testing.T, sessions *scs.SessionManager, ctx context.Context, val string) context.Context {
+	ctx, err := sessions.Load(ctx, authenticatedUser)
+	require.NoError(t, err)
+
+	sessions.Put(ctx, authenticatedUser, val)
+
+	_, _, err = sessions.Commit(ctx)
+	require.NoError(t, err)
+
+	return ctx
+}
+
 func TestRequireAuthenticatedUser(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
@@ -28,13 +40,7 @@ func TestRequireAuthenticatedUser(t *testing.T) {
 
 		sessions := scs.New()
 
-		ctx, err := sessions.Load(r.Context(), authenticatedUser)
-		require.NoError(t, err)
-
-		sessions.Put(ctx, authenticatedUser, db.NewID())
-
-		_, _, err = sessions.Commit(ctx)
-		require.NoError(t, err)
+		ctx := setSession(t, sessions, r.Context(), db.NewID())
 
 		r = r.WithContext(ctx)
 
@@ -80,13 +86,7 @@ func TestRequireAuthenticatedUser(t *testing.T) {
 
 				sessions := scs.New()
 
-				ctx, err := sessions.Load(r.Context(), authenticatedUser)
-				require.NoError(t, err)
-
-				sessions.Put(ctx, authenticatedUser, tt.id)
-
-				_, _, err = sessions.Commit(ctx)
-				require.NoError(t, err)
+				ctx := setSession(t, sessions, r.Context(), tt.id)
 
 				r = r.WithContext(ctx)
 
