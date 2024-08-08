@@ -31,6 +31,7 @@ func Routes(
 		r.Get("/all", HandleListTasks(logger, t))
 		r.Get("/tasks/{task_id}", HandleGetTask(logger, t))
 		r.Patch("/tasks/{task_id}/update", HandleUpdateTask(logger, t))
+		r.Patch("/tasks/{task_id}/complete", HandleCompleteTask(logger, t))
 	})
 	return router
 }

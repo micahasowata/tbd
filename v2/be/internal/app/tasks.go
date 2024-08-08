@@ -200,3 +200,45 @@ func HandleUpdateTask(logger *zap.Logger, tu TaskUpdater) http.HandlerFunc {
 		}
 	})
 }
+
+type TaskCompleter interface {
+	TaskGetter
+	Complete(ctx context.Context, id, userID string) error
+}
+
+func HandleCompleteTask(logger *zap.Logger, tc TaskCompleter) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetTaskID(r)
+		userID := GetUserID(r)
+
+		t, err := tc.GetByID(r.Context(), id, userID)
+		if err != nil {
+			switch {
+			case errors.Is(err, models.ErrRecordNotFound):
+				MissingDataError(w, logger, err)
+			default:
+				ServerError(w, logger, err)
+			}
+			return
+		}
+
+		if t.Completed {
+			err = parser.Write(w, http.StatusNotModified, parser.Envelope{"payload": "task completed"})
+			if err != nil {
+				writeError(w)
+			}
+			return
+		}
+
+		err = tc.Complete(r.Context(), id, userID)
+		if err != nil {
+			ServerError(w, logger, err)
+			return
+		}
+
+		err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": t.ID})
+		if err != nil {
+			writeError(w)
+		}
+	})
+}

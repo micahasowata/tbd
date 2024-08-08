@@ -72,3 +72,11 @@ func (m *TM) Update(ctx context.Context, t *models.Task) error {
 
 	return nil
 }
+
+func (m *TM) Complete(ctx context.Context, id, userID string) error {
+	if id == "200" {
+		return models.ErrOpFailed
+	}
+
+	return nil
+}

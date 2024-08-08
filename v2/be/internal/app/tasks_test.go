@@ -302,3 +302,76 @@ func TestHandleUpdateTask(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleCompleteTask(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		tid := db.NewID()
+
+		rr := httptest.NewRecorder()
+
+		r := httptest.NewRequest(http.MethodPatch, "/", nil)
+		ctx := setTaskID(t, tid)
+		r = r.WithContext(ctx)
+
+		h := app.HandleCompleteTask(zap.NewNop(), testdata.NewTM())
+
+		session := scs.New()
+		m := lsm(t, session, db.NewID())
+
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+		require.Equal(t, http.StatusOK, rr.Code)
+
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body := readTestBody(t, rs.Body)
+
+		require.Contains(t, body, tid)
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		tests := []struct {
+			name string
+			tid  string
+			code int
+		}{
+			{
+				name: "missing task",
+				tid:  "1",
+				code: http.StatusNotFound,
+			},
+			{
+				name: "completed task",
+				tid:  "345",
+				code: http.StatusNotModified,
+			},
+			{
+				name: "completion error",
+				tid:  "200",
+				code: http.StatusInternalServerError,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				rr := httptest.NewRecorder()
+
+				r := httptest.NewRequest(http.MethodPatch, "/", nil)
+				ctx := setTaskID(t, tt.tid)
+				r = r.WithContext(ctx)
+
+				h := app.HandleCompleteTask(zap.NewNop(), testdata.NewTM())
+
+				session := scs.New()
+				m := lsm(t, session, db.NewID())
+
+				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+				require.Equal(t, tt.code, rr.Code)
+			})
+		}
+	})
+}
