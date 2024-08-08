@@ -32,6 +32,7 @@ func Routes(
 		r.Get("/tasks/{task_id}", HandleGetTask(logger, t))
 		r.Patch("/tasks/{task_id}/update", HandleUpdateTask(logger, t))
 		r.Patch("/tasks/{task_id}/complete", HandleCompleteTask(logger, t))
+		r.Delete("/tasks/{task_id}", HandleDeleteTask(logger, t))
 	})
 	return router
 }

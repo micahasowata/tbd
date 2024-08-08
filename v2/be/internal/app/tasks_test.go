@@ -375,3 +375,62 @@ func TestHandleCompleteTask(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleDeleteTask(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		rr := httptest.NewRecorder()
+
+		r := httptest.NewRequest(http.MethodDelete, "/", nil)
+		ctx := setTaskID(t, db.NewID())
+		r = r.WithContext(ctx)
+
+		session := scs.New()
+		h := app.HandleDeleteTask(zap.NewNop(), testdata.NewTM())
+		m := lsm(t, session, db.NewID())
+
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		tests := []struct {
+			name string
+			tid  string
+			code int
+		}{
+			{
+				name: "missing task",
+				tid:  "1",
+				code: http.StatusNotFound,
+			},
+			{
+				name: "delete error",
+				tid:  "201",
+				code: http.StatusInternalServerError,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				rr := httptest.NewRecorder()
+
+				r := httptest.NewRequest(http.MethodDelete, "/", nil)
+				ctx := setTaskID(t, tt.tid)
+				r = r.WithContext(ctx)
+
+				session := scs.New()
+				h := app.HandleDeleteTask(zap.NewNop(), testdata.NewTM())
+				m := lsm(t, session, db.NewID())
+
+				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+
+				require.Equal(t, tt.code, rr.Code)
+			})
+		}
+	})
+}

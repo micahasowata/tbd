@@ -80,3 +80,11 @@ func (m *TM) Complete(ctx context.Context, id, userID string) error {
 
 	return nil
 }
+
+func (m *TM) Delete(ctx context.Context, id, userID string) error {
+	if id == "201" {
+		return models.ErrOpFailed
+	}
+
+	return nil
+}

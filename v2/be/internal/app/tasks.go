@@ -242,3 +242,37 @@ func HandleCompleteTask(logger *zap.Logger, tc TaskCompleter) http.HandlerFunc {
 		}
 	})
 }
+
+type TaskDeleter interface {
+	TaskGetter
+	Delete(ctx context.Context, id, userID string) error
+}
+
+func HandleDeleteTask(logger *zap.Logger, td TaskDeleter) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetTaskID(r)
+		userID := GetUserID(r)
+
+		t, err := td.GetByID(r.Context(), id, userID)
+		if err != nil {
+			switch {
+			case errors.Is(err, models.ErrRecordNotFound):
+				MissingDataError(w, logger, err)
+			default:
+				ServerError(w, logger, err)
+			}
+			return
+		}
+
+		err = td.Delete(r.Context(), t.ID, userID)
+		if err != nil {
+			ServerError(w, logger, err)
+			return
+		}
+
+		err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": "deleted"})
+		if err != nil {
+			writeError(w)
+		}
+	})
+}
