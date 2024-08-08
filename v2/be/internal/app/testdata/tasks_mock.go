@@ -2,6 +2,7 @@ package testdata
 
 import (
 	"context"
+
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 
@@ -43,6 +44,17 @@ func (m *TM) GetByID(ctx context.Context, id, userID string) (*models.Task, erro
 		return nil, models.ErrRecordNotFound
 	}
 
+	if id == "345" {
+		c := &models.Task{
+			ID:          id,
+			UserID:      userID,
+			Title:       gofakeit.BookTitle(),
+			Description: gofakeit.Blurb(),
+			Completed:   true,
+		}
+		return c, nil
+	}
+
 	t := &models.Task{
 		ID:          id,
 		UserID:      userID,
@@ -51,4 +63,12 @@ func (m *TM) GetByID(ctx context.Context, id, userID string) (*models.Task, erro
 	}
 
 	return t, nil
+}
+
+func (m *TM) Update(ctx context.Context, t *models.Task) error {
+	if t.Title == "test" {
+		return models.ErrRecordNotFound
+	}
+
+	return nil
 }

@@ -122,3 +122,81 @@ func HandleGetTask(logger *zap.Logger, tg TaskGetter) http.HandlerFunc {
 		}
 	})
 }
+
+type TaskUpdater interface {
+	TaskGetter
+	Update(ctx context.Context, t *models.Task) error
+}
+
+func HandleUpdateTask(logger *zap.Logger, tu TaskUpdater) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetTaskID(r)
+		userID := GetUserID(r)
+
+		var input struct {
+			Title       string `json:"title"`
+			Description string `json:"description"`
+		}
+
+		err := parser.Read(w, r, &input)
+		if err != nil {
+			ReadError(w, logger, err)
+			return
+		}
+
+		input.Title = parser.Sanitize(input.Title)
+		input.Description = parser.Sanitize(input.Description)
+
+		v := validator.New()
+		v.RequiredString(input.Title, "title", validator.Required)
+		v.RequiredString(input.Description, "description", validator.Required)
+		if !v.Valid() {
+			InvalidDataError(w, v.Errors())
+			return
+		}
+
+		t, err := tu.GetByID(r.Context(), id, userID)
+		if err != nil {
+			switch {
+			case errors.Is(err, models.ErrRecordNotFound):
+				MissingDataError(w, logger, err)
+			default:
+				ServerError(w, logger, err)
+			}
+			return
+		}
+
+		if t.Completed {
+			err = parser.Write(w, http.StatusNotModified, parser.Envelope{"payload": "task completed"})
+			if err != nil {
+				writeError(w)
+			}
+
+			return
+		}
+
+		if t.Title != input.Title {
+			t.Title = input.Title
+		}
+
+		if t.Description != input.Description {
+			t.Description = input.Description
+		}
+
+		err = tu.Update(r.Context(), t)
+		if err != nil {
+			switch {
+			case errors.Is(err, models.ErrRecordNotFound):
+				MissingDataError(w, logger, err)
+			default:
+				ServerError(w, logger, err)
+			}
+			return
+		}
+
+		err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": t.ID})
+		if err != nil {
+			writeError(w)
+		}
+	})
+}

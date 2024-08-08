@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
+
+func setTaskID(t *testing.T, id string) context.Context {
+	t.Helper()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("task_id", id)
+	ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+
+	return ctx
+}
 
 func TestHandleCreateTask(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
@@ -184,15 +195,109 @@ func TestHandleGetTask(t *testing.T) {
 				h := app.HandleGetTask(zap.NewNop(), testdata.NewTM())
 				m := lsm(t, session, tt.uid)
 
-				rctx := chi.NewRouteContext()
-				rctx.URLParams.Add("task_id", tt.tid)
-				ctx := context.WithValue(r.Context(), chi.RouteCtxKey, rctx)
+				ctx := setTaskID(t, tt.tid)
 
 				r = r.WithContext(ctx)
 
 				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
 				require.Equal(t, http.StatusNotFound, rr.Code)
+			})
+		}
+	})
+}
+
+func TestHandleUpdateTask(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		uid := db.NewID()
+		tid := db.NewID()
+
+		rr := httptest.NewRecorder()
+
+		body := `{"title": "read", "description": "complete a chapter"}`
+		r := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer([]byte(body)))
+
+		session := scs.New()
+		h := app.HandleUpdateTask(zap.NewNop(), testdata.NewTM())
+		m := lsm(t, session, uid)
+		ctx := setTaskID(t, tid)
+		r = r.WithContext(ctx)
+
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body = readTestBody(t, rs.Body)
+		require.Contains(t, body, tid)
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		tests := []struct {
+			name string
+			uid  string
+			tid  string
+			body string
+			code int
+		}{
+			{
+				name: "bad body",
+				uid:  db.NewID(),
+				tid:  db.NewID(),
+				body: `{"name":"happier"}`,
+				code: http.StatusBadRequest,
+			},
+			{
+				name: "invalid data",
+				uid:  db.NewID(),
+				tid:  db.NewID(),
+				body: `{"title":"", "description":"early morning run"}`,
+				code: http.StatusUnprocessableEntity,
+			},
+			{
+				name: "missing data",
+				uid:  db.NewID(),
+				tid:  "1",
+				body: `{"title":"learn testing", "description":"practice TDD"}`,
+				code: http.StatusNotFound,
+			},
+			{
+				name: "completed task",
+				uid:  db.NewID(),
+				tid:  "345",
+				body: `{"title":"learn testing", "description":"practice TDD"}`,
+				code: http.StatusNotModified,
+			},
+			{
+				name: "update failed",
+				uid:  db.NewID(),
+				tid:  db.NewID(),
+				body: `{"title":"test", "description":"update fails"}`,
+				code: http.StatusNotFound,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				rr := httptest.NewRecorder()
+				r := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer([]byte(tt.body)))
+				ctx := setTaskID(t, tt.tid)
+				r = r.WithContext(ctx)
+
+				session := scs.New()
+
+				h := app.HandleUpdateTask(zap.NewNop(), testdata.NewTM())
+				m := lsm(t, session, tt.uid)
+
+				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+
+				require.Equal(t, tt.code, rr.Code)
 			})
 		}
 	})

@@ -2,6 +2,7 @@ package testdata
 
 import (
 	"context"
+
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 
@@ -9,8 +10,7 @@ import (
 )
 
 // UM is short for Users Mock
-type UM struct {
-}
+type UM struct{}
 
 func NewUM() *UM {
 	return &UM{}
