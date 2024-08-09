@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"strings"
+
 	"v2/be/internal/db"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	ErrDuplicateUsername = errors.New("username exists")
-)
+var ErrDuplicateUsername = errors.New("username exists")
 
 type User struct {
 	ID       string `json:"id"`
@@ -21,7 +20,7 @@ type User struct {
 }
 
 type UsersModel struct {
-	pool *pgxpool.Pool
+	Pool *pgxpool.Pool
 }
 
 func (m *UsersModel) Create(ctx context.Context, u *User) error {
@@ -30,12 +29,11 @@ func (m *UsersModel) Create(ctx context.Context, u *User) error {
 
 	args := []any{u.ID, u.Username, u.Password}
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -69,12 +67,11 @@ func (m *UsersModel) GetByUsername(ctx context.Context, username string) (*User,
 	FROM users
 	WHERE username = $1`
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +83,6 @@ func (m *UsersModel) GetByUsername(ctx context.Context, username string) (*User,
 		&u.ID,
 		&u.Password,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -107,12 +103,11 @@ func (m *UsersModel) GetByUsername(ctx context.Context, username string) (*User,
 func (m *UsersModel) Exists(ctx context.Context, id string) (bool, error) {
 	query := `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)`
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return false, err
 	}

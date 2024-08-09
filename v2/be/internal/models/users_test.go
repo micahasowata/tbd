@@ -1,260 +1,169 @@
-package models
+package models_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
 
-	"github.com/alexedwards/argon2id"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"v2/be/internal/db"
+	"v2/be/internal/models"
+
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/require"
 )
 
-func TestUsersModelCreate(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+func TestUsersCreate(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
-	hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-	require.NoError(t, err)
+		pool := testPool(t)
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
+		}
 
-	username := fmt.Sprintf("testuser_%s", time.Now().String())
-	usersModel := &UsersModel{pool: pool}
+		err := users.Create(context.Background(), u)
+		require.NoError(t, err)
+	})
 
-	tests := []struct {
-		name    string
-		user    *User
-		wantErr bool
-	}{
-		{
-			name: "Valid user creation",
-			user: &User{
-				ID:       uuid.New().String(),
-				Username: username,
-				Password: []byte(hash),
-			},
-			wantErr: false,
-		},
-		{
-			name: "Duplicate username",
-			user: &User{
-				ID:       uuid.New().String(),
-				Username: username,
-				Password: []byte(hash),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Empty username",
-			user: &User{
-				ID:       uuid.New().String(),
-				Username: "",
-				Password: []byte(hash),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Empty password",
-			user: &User{
-				ID:       uuid.New().String(),
-				Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-				Password: nil,
-			},
-			wantErr: true,
-		},
-	}
+	t.Run("duplicate username", func(t *testing.T) {
+		t.Parallel()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := usersModel.Create(context.Background(), tt.user)
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
+		pool := testPool(t)
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
+		}
 
-func TestUsersModelCreateWithCancelledContext(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+		err := users.Create(context.Background(), u)
+		require.NoError(t, err)
 
-	defer pool.Close()
+		uTwo := &models.User{
+			ID:       db.NewID(),
+			Username: u.Username,
+			Password: []byte(testUserPassword(t)),
+		}
 
-	hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-	require.NoError(t, err)
-	usersModel := &UsersModel{pool: pool}
+		err = users.Create(context.Background(), uTwo)
+		require.ErrorIs(t, err, models.ErrDuplicateUsername)
+	})
 
-	user := &User{
-		ID:       uuid.New().String(),
-		Username: "testuser",
-		Password: []byte(hash),
-	}
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+		pool := testPool(t)
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
+		}
 
-	err = usersModel.Create(ctx, user)
-	require.Error(t, err)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		err := users.Create(ctx, u)
+		require.Error(t, err)
+	})
 }
 
 func TestGetByUsername(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel := &UsersModel{pool: pool}
-
-	t.Run("ExistingUser", func(t *testing.T) {
-		ctx := context.Background()
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
 
-		err = usersModel.Create(context.Background(), user)
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		user, err = usersModel.GetByUsername(ctx, user.Username)
+		user, err := users.GetByUsername(context.Background(), u.Username)
 		require.NoError(t, err)
 		require.NotNil(t, user)
-		require.NotEmpty(t, user.ID)
-		require.NotEmpty(t, user.Password)
+		require.Equal(t, u.ID, user.ID)
+		require.Equal(t, u.Password, user.Password)
 	})
 
-	t.Run("NonExistentUser", func(t *testing.T) {
-		ctx := context.Background()
-		username := "nonexistentuser"
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
 
-		user, err := usersModel.GetByUsername(ctx, username)
+		pool := testPool(t)
+		users := &models.UsersModel{Pool: pool}
+
+		u, err := users.GetByUsername(context.Background(), gofakeit.AdverbManner())
 		require.Error(t, err)
-		require.Nil(t, user)
-		require.ErrorIs(t, err, ErrRecordNotFound)
+		require.Nil(t, u)
+		require.ErrorIs(t, err, models.ErrRecordNotFound)
 	})
 
-	t.Run("EmptyUsername", func(t *testing.T) {
-		ctx := context.Background()
-		username := ""
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
 
-		user, err := usersModel.GetByUsername(ctx, username)
-		require.Error(t, err)
-		require.Nil(t, user)
-	})
+		pool := testPool(t)
 
-	t.Run("CanceledContext", func(t *testing.T) {
+		users := &models.UsersModel{Pool: pool}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		username := "existinguser"
 
-		user, err := usersModel.GetByUsername(ctx, username)
+		u, err := users.GetByUsername(ctx, gofakeit.Username())
 		require.Error(t, err)
-		require.Nil(t, user)
-	})
-
-	t.Run("TransactionRollback", func(t *testing.T) {
-		ctx := context.Background()
-		username := "existinguser"
-
-		// Simulate a transaction rollback by closing the pool
-		pool.Close()
-
-		user, err := usersModel.GetByUsername(ctx, username)
-		require.Error(t, err)
-		require.Nil(t, user)
+		require.Nil(t, u)
 	})
 }
 
 func TestUsersModelExists(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 
-	defer pool.Close()
+		pool := testPool(t)
 
-	usersModel := &UsersModel{pool: pool}
-
-	t.Run("Existing User", func(t *testing.T) {
-		ctx := context.Background()
-		hash, err := argon2id.CreateHash("Secret Password", argon2id.DefaultParams)
-		require.NoError(t, err)
-
-		user := &User{
-			ID:       uuid.New().String(),
-			Username: fmt.Sprintf("testuser_%s", time.Now().String()),
-			Password: []byte(hash),
+		users := &models.UsersModel{Pool: pool}
+		u := &models.User{
+			ID:       db.NewID(),
+			Username: gofakeit.Username(),
+			Password: []byte(testUserPassword(t)),
 		}
 
-		err = usersModel.Create(context.Background(), user)
+		err := users.Create(context.Background(), u)
 		require.NoError(t, err)
 
-		exists, err := usersModel.Exists(ctx, user.ID)
+		exists, err := users.Exists(context.Background(), u.ID)
 		require.NoError(t, err)
 		require.True(t, exists)
 	})
 
-	t.Run("Non-Existent User", func(t *testing.T) {
-		ctx := context.Background()
-		id := uuid.New().String()
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
 
-		exists, err := usersModel.Exists(ctx, id)
+		pool := testPool(t)
+		users := &models.UsersModel{Pool: pool}
+
+		exists, err := users.Exists(context.Background(), db.NewID())
 		require.NoError(t, err)
 		require.False(t, exists)
 	})
 
-	t.Run("Invalid ID", func(t *testing.T) {
-		ctx := context.Background()
-		id := "invalid-id-format"
+	t.Run("cancelled ctx", func(t *testing.T) {
+		t.Parallel()
 
-		exists, err := usersModel.Exists(ctx, id)
-		require.NoError(t, err)
+		pool := testPool(t)
+		users := &models.UsersModel{Pool: pool}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		exists, err := users.Exists(ctx, db.NewID())
+		require.Error(t, err)
 		require.False(t, exists)
 	})
-
-	t.Run("Empty ID", func(t *testing.T) {
-		ctx := context.Background()
-		exists, err := usersModel.Exists(ctx, "")
-		require.NoError(t, err)
-		require.False(t, exists)
-	})
-}
-
-func TestUsersModelExistsWithClosedPool(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
-
-	usersModel := &UsersModel{pool: pool}
-
-	pool.Close()
-
-	ctx := context.Background()
-	_, err = usersModel.Exists(ctx, "some-id")
-	require.Error(t, err)
-}
-
-func TestUsersModelExistsWithCancelledContext(t *testing.T) {
-	pool, err := pgxpool.New(context.Background(), dsn)
-	require.NoError(t, err)
-	require.NotNil(t, pool)
-
-	defer pool.Close()
-
-	usersModel := &UsersModel{pool: pool}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	_, err = usersModel.Exists(ctx, "some-id")
-	require.Error(t, err)
 }

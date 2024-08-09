@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"strings"
+
 	"v2/be/internal/db"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	ErrDuplicateTask = errors.New("task exist")
-)
+var ErrDuplicateTask = errors.New("task exist")
 
 type Task struct {
 	ID          string `json:"id"`
@@ -23,7 +22,7 @@ type Task struct {
 }
 
 type TasksModel struct {
-	pool *pgxpool.Pool
+	Pool *pgxpool.Pool
 }
 
 func (m *TasksModel) Create(ctx context.Context, t *Task) error {
@@ -32,12 +31,11 @@ func (m *TasksModel) Create(ctx context.Context, t *Task) error {
 
 	args := []any{t.ID, t.UserID, t.Title, t.Description, t.Completed}
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -71,12 +69,11 @@ func (m *TasksModel) All(ctx context.Context, userID string) ([]*Task, error) {
 	FROM tasks
 	WHERE user_id = $1`
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -126,12 +123,11 @@ func (m *TasksModel) GetByID(ctx context.Context, id, userID string) (*Task, err
 
 	args := []any{id, userID}
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadOnly,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +142,6 @@ func (m *TasksModel) GetByID(ctx context.Context, id, userID string) (*Task, err
 		&t.Description,
 		&t.Completed,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -171,12 +166,11 @@ func (m *TasksModel) Update(ctx context.Context, t *Task) error {
 
 	args := []any{t.Title, t.Description, t.ID}
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -212,12 +206,11 @@ func (m *TasksModel) Complete(ctx context.Context, id, userID string) error {
 
 	args := []any{id, userID}
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -247,12 +240,11 @@ func (m *TasksModel) Delete(ctx context.Context, id, userID string) error {
 
 	args := []any{id, userID}
 
-	tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{
+	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.NotDeferrable,
 	})
-
 	if err != nil {
 		return err
 	}

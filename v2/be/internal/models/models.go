@@ -19,10 +19,10 @@ type Models struct {
 func New(pool *pgxpool.Pool) *Models {
 	return &Models{
 		Users: &UsersModel{
-			pool: pool,
+			Pool: pool,
 		},
 		Tasks: &TasksModel{
-			pool: pool,
+			Pool: pool,
 		},
 	}
 }
