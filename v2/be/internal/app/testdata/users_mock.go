@@ -9,7 +9,6 @@ import (
 	"github.com/alexedwards/argon2id"
 )
 
-// UM is short for Users Mock
 type UM struct{}
 
 func NewUM() *UM {
@@ -21,6 +20,10 @@ func (m *UM) Create(ctx context.Context, u *models.User) error {
 		return models.ErrDuplicateUsername
 	}
 
+	if u.Username == "testX" {
+		return models.ErrOpFailed
+	}
+
 	return nil
 }
 
@@ -29,10 +32,15 @@ func (m *UM) GetByUsername(ctx context.Context, username string) (*models.User, 
 		return nil, models.ErrRecordNotFound
 	}
 
+	if username == "testX" {
+		return nil, models.ErrOpFailed
+	}
+
 	hash, err := argon2id.CreateHash("0~,9ZZArDp#M", argon2id.DefaultParams)
 	if err != nil {
 		return nil, err
 	}
+
 	return &models.User{
 		ID:       db.NewID(),
 		Username: username,

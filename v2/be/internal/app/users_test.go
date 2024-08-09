@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,7 +11,7 @@ import (
 	"v2/be/internal/db"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/gavv/httpexpect/v2"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
@@ -18,47 +19,51 @@ func TestHandleSignup(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
-		logger := zap.NewNop()
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer([]byte(`{"username": "alex", "password": "R#L:>t^9N?%o"}`)))
+
 		sessions := scs.New()
+		h := app.HandleSignup(zap.NewNop(), sessions, testdata.NewUM())
 
-		body := map[string]string{"username": "alex", "password": "R#L:>t^9N?%o"}
+		sessions.LoadAndSave(h).ServeHTTP(rr, r)
 
-		h := app.HandleSignup(logger, sessions, testdata.NewUM())
+		require.Equal(t, http.StatusCreated, rr.Code)
 
-		ts := httptest.NewServer(sessions.LoadAndSave(h))
-		defer ts.Close()
+		rs := rr.Result()
+		defer rs.Body.Close()
 
-		e := httpexpect.Default(t, ts.URL)
+		body := readTestBody(t, rs.Body)
 
-		e.POST("/signup").
-			WithJSON(body).
-			Expect().
-			Status(http.StatusCreated).
-			HasContentType("application/json").
-			Cookie("session").
-			HasMaxAge().Path().NotEmpty()
+		require.Contains(t, body, "payload")
+		require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+		require.Len(t, rs.Cookies(), 1)
 	})
 
 	t.Run("errors", func(t *testing.T) {
 		tests := []struct {
 			name string
-			body map[string]string
+			body string
 			code int
 		}{
 			{
 				name: "bad body",
-				body: map[string]string{"name": "Jim Carrey"},
+				body: `{"name": "Jim Carrey"}`,
 				code: http.StatusBadRequest,
 			},
 			{
 				name: "invalid body",
-				body: map[string]string{"password": "}x0~6sz32}cN4"},
+				body: `{"password": "}x0~6sz32}cN4"}`,
 				code: http.StatusUnprocessableEntity,
 			},
 			{
 				name: "duplicate data",
-				body: map[string]string{"username": "tester", "password": ":2~R9dq)fC9gQ"}, // Check users_mock.go for username.
+				body: `{"username": "tester", "password": ":2~R9dq)fC9gQ"}`,
 				code: http.StatusConflict,
+			},
+			{
+				name: "op failed",
+				body: `{"username": "testX", "password": ":2~R9dq)fC9gQ"}`,
+				code: http.StatusInternalServerError,
 			},
 		}
 
@@ -66,21 +71,25 @@ func TestHandleSignup(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
-				logger := zap.NewNop()
+				rr := httptest.NewRecorder()
+				r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer([]byte(tt.body)))
+
 				sessions := scs.New()
 
-				h := app.HandleSignup(logger, sessions, testdata.NewUM())
+				h := app.HandleSignup(zap.NewNop(), sessions, testdata.NewUM())
 
-				ts := httptest.NewServer(sessions.LoadAndSave(h))
-				defer ts.Close()
+				sessions.LoadAndSave(h).ServeHTTP(rr, r)
 
-				e := httpexpect.Default(t, ts.URL)
+				require.Equal(t, tt.code, rr.Code)
 
-				e.POST("/signup").
-					WithJSON(tt.body).
-					Expect().
-					Status(tt.code).
-					HasContentType("application/json")
+				rs := rr.Result()
+				defer rs.Body.Close()
+
+				body := readTestBody(t, rs.Body)
+
+				require.Contains(t, body, "error")
+				require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+				require.Len(t, rs.Cookies(), 0)
 			})
 		}
 	})
@@ -90,49 +99,57 @@ func TestHandleLogin(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
-		logger := zap.NewNop()
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer([]byte(`{"username": "alex", "password": "0~,9ZZArDp#M"}`)))
+
 		sessions := scs.New()
-		body := map[string]string{"username": "alex", "password": "0~,9ZZArDp#M"}
-		h := app.HandleLogin(logger, sessions, testdata.NewUM())
 
-		ts := httptest.NewServer(sessions.LoadAndSave(h))
-		defer ts.Close()
+		h := app.HandleLogin(zap.NewNop(), sessions, testdata.NewUM())
 
-		e := httpexpect.Default(t, ts.URL)
+		sessions.LoadAndSave(h).ServeHTTP(rr, r)
 
-		e.POST("/login").
-			WithJSON(body).
-			Expect().
-			Status(http.StatusOK).
-			HasContentType("application/json").
-			Cookie("session").HasMaxAge().Path().IsEqual("/")
+		require.Equal(t, http.StatusOK, rr.Code)
+
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body := readTestBody(t, rs.Body)
+
+		require.Contains(t, body, "payload")
+		require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+		require.Len(t, rs.Cookies(), 1)
 	})
 
 	t.Run("errors", func(t *testing.T) {
 		tests := []struct {
 			name string
-			body map[string]string
+			body string
 			code int
 		}{
 			{
 				name: "bad data",
-				body: map[string]string{"name": "tester"},
+				body: `{"name": "tester"}`,
 				code: http.StatusBadRequest,
 			},
 			{
 				name: "invalid data",
-				body: map[string]string{"username": "entre", "password": "iloveyou"},
+				body: `{"username": "entre", "password": "iloveyou"}`,
 				code: http.StatusUnprocessableEntity,
 			},
 			{
 				name: "invalid user",
-				body: map[string]string{"username": "tester", "password": "0~,9ZZArDp#M"},
+				body: `{"username": "tester", "password": "0~,9ZZArDp#M"}`,
 				code: http.StatusNotFound,
 			},
 			{
 				name: "invalid password",
-				body: map[string]string{"username": "kolo", "password": "0~,9ZZArDp#N"},
+				body: `{"username": "kolo", "password": "0~,9ZZArDp#N"}`,
 				code: http.StatusNotFound,
+			},
+			{
+				name: "op failed",
+				body: `{"username": "testX", "password": "0~,9ZZArDp#N"}`,
+				code: http.StatusInternalServerError,
 			},
 		}
 
@@ -140,20 +157,25 @@ func TestHandleLogin(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
+				rr := httptest.NewRecorder()
+				r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer([]byte(tt.body)))
+
 				sessions := scs.New()
 
 				h := app.HandleLogin(zap.NewNop(), sessions, testdata.NewUM())
 
-				ts := httptest.NewServer(sessions.LoadAndSave(h))
-				defer ts.Close()
+				sessions.LoadAndSave(h).ServeHTTP(rr, r)
 
-				e := httpexpect.Default(t, ts.URL)
+				require.Equal(t, tt.code, rr.Code)
 
-				e.POST("/login").
-					WithJSON(tt.body).
-					Expect().
-					HasContentType("application/json").
-					Status(tt.code)
+				rs := rr.Result()
+				defer rs.Body.Close()
+
+				body := readTestBody(t, rs.Body)
+
+				require.Contains(t, body, "error")
+				require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+				require.Len(t, rs.Cookies(), 0)
 			})
 		}
 	})
@@ -162,18 +184,24 @@ func TestHandleLogin(t *testing.T) {
 func TestHandleLogout(t *testing.T) {
 	t.Parallel()
 
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/", nil)
+
 	sessions := scs.New()
 
 	h := app.HandleLogout(zap.NewNop(), sessions)
 	m := lsm(t, sessions, db.NewID())
 
-	ts := httptest.NewServer(sessions.LoadAndSave(m(h)))
-	defer ts.Close()
+	sessions.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
-	e := httpexpect.Default(t, ts.URL)
+	require.Equal(t, http.StatusOK, rr.Code)
 
-	e.POST("/logout").
-		Expect().
-		HasContentType("application/json").
-		Status(http.StatusOK)
+	rs := rr.Result()
+	defer rs.Body.Close()
+
+	body := readTestBody(t, rs.Body)
+
+	require.Contains(t, body, "payload")
+	require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+	require.Len(t, rs.Cookies(), 1)
 }
