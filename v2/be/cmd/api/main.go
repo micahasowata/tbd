@@ -1,60 +1,61 @@
 package main
 
 import (
-	"errors"
 	"log"
-	"net"
 	"net/http"
 	"os"
-	"time"
+	"v2/be/internal/app"
 	"v2/be/internal/db"
 	"v2/be/internal/models"
 
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/pseidemann/finish"
 	"go.uber.org/zap"
 )
 
-const authenticatedUser = "authenticatedUser"
-
-type application struct {
-	logger   *zap.Logger
-	sessions *scs.SessionManager
-	models   *models.Models
-}
-
 func main() {
-	logger := zap.Must(zap.NewProduction())
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
 
-	dsn := os.Getenv("DSN")
+	dsn, ok := os.LookupEnv("DSN")
+	if !ok {
+		panic("dsn not set")
+	}
+
 	pool, err := db.New(dsn)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
+
+	m := models.New(pool)
 
 	sessions := scs.New()
-	sessions.Store = pgxstore.NewWithCleanupInterval(pool, 10*time.Hour)
+	sessions.Store = pgxstore.New(pool)
 
-	app := application{
-		logger:   logger,
-		sessions: sessions,
-		models:   models.New(pool),
-	}
+	r := app.Routes(sessions, logger, m.Users, m.Tasks)
 
 	srv := &http.Server{
-		Addr:           net.JoinHostPort("localhost", "4567"),
-		Handler:        app.routes(),
-		MaxHeaderBytes: 1_048_576,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		IdleTimeout:    1 * time.Minute,
+		Addr:     ":4444",
+		Handler:  r,
+		ErrorLog: zap.NewStdLog(logger),
 	}
 
-	logger.Info("server start", zap.String("addr", srv.Addr))
+	logger.Info("server started", zap.String("address", "http://localhost"+srv.Addr))
 
-	err = srv.ListenAndServe()
-	if errors.Is(err, http.ErrServerClosed) {
-		logger.Error("startup error", zap.Error(err))
-	}
+	fin := finish.New()
+	fin.Log = logger.Sugar()
+
+	fin.Add(srv)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	fin.Wait()
 }

@@ -21,15 +21,6 @@ type Task struct {
 	Completed   bool   `json:"completed"`
 }
 
-type Tasks interface {
-	Create(ctx context.Context, t *Task) error
-	All(ctx context.Context, userID string) ([]*Task, error)
-	GetByID(ctx context.Context, id, userID string) (*Task, error)
-	Update(ctx context.Context, t *Task) error
-	Complete(ctx context.Context, id, userID string) error
-	Delete(ctx context.Context, id, userID string) error
-}
-
 type TasksModel struct {
 	Pool *pgxpool.Pool
 }
