@@ -13,6 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrTaskNotModifed = errors.New("task not modified")
+
 type TaskCreater interface {
 	Create(ctx context.Context, t *models.Task) error
 }
@@ -116,7 +118,7 @@ func HandleGetTask(logger *zap.Logger, tg TaskGetter) http.HandlerFunc {
 			return
 		}
 
-		err = parser.Write(w, http.StatusFound, parser.Envelope{"payload": t})
+		err = parser.Write(w, http.StatusOK, parser.Envelope{"payload": t})
 		if err != nil {
 			writeError(w)
 		}
@@ -167,11 +169,7 @@ func HandleUpdateTask(logger *zap.Logger, tu TaskUpdater) http.HandlerFunc {
 		}
 
 		if t.Completed {
-			err = parser.Write(w, http.StatusNotModified, parser.Envelope{"payload": "task completed"})
-			if err != nil {
-				writeError(w)
-			}
-
+			UnmodifiedDataError(w, logger, ErrTaskNotModifed)
 			return
 		}
 
@@ -223,10 +221,7 @@ func HandleCompleteTask(logger *zap.Logger, tc TaskCompleter) http.HandlerFunc {
 		}
 
 		if t.Completed {
-			err = parser.Write(w, http.StatusNotModified, parser.Envelope{"payload": "task completed"})
-			if err != nil {
-				writeError(w)
-			}
+			UnmodifiedDataError(w, logger, ErrTaskNotModifed)
 			return
 		}
 

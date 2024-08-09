@@ -69,3 +69,12 @@ func UnauthorizedAccessError(w http.ResponseWriter, logger *zap.Logger, err erro
 		writeError(w)
 	}
 }
+
+func UnmodifiedDataError(w http.ResponseWriter, logger *zap.Logger, err error) {
+	logError(logger, err)
+
+	err = parser.Write(w, http.StatusNotModified, parser.Envelope{"error": err.Error()})
+	if err != nil {
+		writeError(w)
+	}
+}

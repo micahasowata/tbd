@@ -113,3 +113,19 @@ func TestUnauthorizedError(t *testing.T) {
 
 	require.Contains(t, body, "unauthorized access")
 }
+
+func TestUnmodifiedDataError(t *testing.T) {
+	t.Parallel()
+
+	rr := httptest.NewRecorder()
+
+	app.UnmodifiedDataError(rr, zap.NewNop(), errors.New("not modified"))
+	require.Equal(t, http.StatusNotModified, rr.Code)
+
+	rs := rr.Result()
+	defer rs.Body.Close()
+
+	body := readTestBody(t, rs.Body)
+
+	require.Contains(t, body, "not modified")
+}

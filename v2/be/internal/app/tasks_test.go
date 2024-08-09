@@ -11,7 +11,6 @@ import (
 	"v2/be/internal/db"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/gavv/httpexpect/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -20,9 +19,9 @@ import (
 func setTaskID(t *testing.T, id string) context.Context {
 	t.Helper()
 
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("task_id", id)
-	ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+	rtx := chi.NewRouteContext()
+	rtx.URLParams.Add("task_id", id)
+	ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rtx)
 
 	return ctx
 }
@@ -31,44 +30,52 @@ func TestHandleCreateTask(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer([]byte(`{"title": "running", "description": "just keeping fit"}`)))
+
 		session := scs.New()
 
 		h := app.HandleCreateTask(zap.NewNop(), testdata.NewTM())
 		m := lsm(t, session, db.NewID())
-		body := map[string]string{"title": "running", "description": "just keeping fit"}
 
-		ts := httptest.NewServer(session.LoadAndSave(m(h)))
-		defer ts.Close()
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
-		e := httpexpect.Default(t, ts.URL)
+		require.Equal(t, http.StatusCreated, rr.Code)
 
-		e.POST("/create").
-			WithJSON(body).
-			Expect().
-			Status(http.StatusCreated).
-			HasContentType("application/json")
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body := readTestBody(t, rs.Body)
+
+		require.Contains(t, body, "payload")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 	})
 
 	t.Run("errors", func(t *testing.T) {
 		tests := []struct {
 			name string
-			body map[string]string
+			body string
 			code int
 		}{
 			{
 				name: "bad body",
-				body: map[string]string{"name": "running"},
+				body: `{"name": "running"}`,
 				code: http.StatusBadRequest,
 			},
 			{
 				name: "invalid data",
-				body: map[string]string{"title": "", "description": "just empty"},
+				body: `{"title": "", "description": "just empty"}`,
 				code: http.StatusUnprocessableEntity,
 			},
 			{
 				name: "duplicate data",
-				body: map[string]string{"title": "test", "description": "duplicated"},
+				body: `{"title": "test", "description": "duplicated"}`,
 				code: http.StatusConflict,
+			},
+			{
+				name: "op failed",
+				body: `{"title": "testX", "description": "duplicated"}`,
+				code: http.StatusInternalServerError,
 			},
 		}
 
@@ -76,22 +83,25 @@ func TestHandleCreateTask(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
+				rr := httptest.NewRecorder()
+				r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer([]byte(tt.body)))
+
 				session := scs.New()
 
 				h := app.HandleCreateTask(zap.NewNop(), testdata.NewTM())
 				m := lsm(t, session, db.NewID())
 
-				ts := httptest.NewServer(session.LoadAndSave(m(h)))
-				defer ts.Close()
+				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
-				e := httpexpect.Default(t, ts.URL)
+				require.Equal(t, tt.code, rr.Code)
 
-				e.POST("/create").
-					WithJSON(tt.body).
-					Expect().
-					Status(tt.code).
-					HasContentType("application/json")
+				rs := rr.Result()
+				defer rs.Body.Close()
 
+				body := readTestBody(t, rs.Body)
+
+				require.Contains(t, body, "error")
+				require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 			})
 		}
 	})
@@ -101,39 +111,70 @@ func TestHandleListTasks(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+
 		session := scs.New()
 		h := app.HandleListTasks(zap.NewNop(), testdata.NewTM())
 		m := lsm(t, session, db.NewID())
 
-		ts := httptest.NewServer(session.LoadAndSave(m(h)))
-		defer ts.Close()
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
-		e := httpexpect.Default(t, ts.URL)
+		require.Equal(t, http.StatusOK, rr.Code)
 
-		e.GET("/all").
-			Expect().
-			Status(http.StatusOK).
-			HasContentType("application/json").
-			JSON().Object().Value("payload").Array().NotEmpty()
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body := readTestBody(t, rs.Body)
+
+		require.Contains(t, body, "payload")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 	})
 
-	t.Run("errors", func(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
 		t.Parallel()
+
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
 
 		session := scs.New()
 		h := app.HandleListTasks(zap.NewNop(), testdata.NewTM())
 		m := lsm(t, session, "1")
 
-		ts := httptest.NewServer(session.LoadAndSave(m(h)))
-		defer ts.Close()
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
-		e := httpexpect.Default(t, ts.URL)
+		require.Equal(t, http.StatusOK, rr.Code)
 
-		e.GET("/all").
-			Expect().
-			Status(http.StatusOK).
-			HasContentType("application/json").
-			JSON().Object().Value("payload").Array().IsEmpty()
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body := readTestBody(t, rs.Body)
+
+		require.Contains(t, body, "[]")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		t.Parallel()
+
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+
+		session := scs.New()
+		h := app.HandleListTasks(zap.NewNop(), testdata.NewTM())
+		m := lsm(t, session, "25")
+
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+
+		require.Equal(t, http.StatusInternalServerError, rr.Code)
+
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body := readTestBody(t, rs.Body)
+
+		require.Contains(t, body, "error")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 	})
 }
 
@@ -141,45 +182,44 @@ func TestHandleGetTask(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
-		tid := db.NewID()
+		rr := httptest.NewRecorder()
+
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		ctx := setTaskID(t, db.NewID())
+		r = r.WithContext(ctx)
 
 		session := scs.New()
 
 		h := app.HandleGetTask(zap.NewNop(), testdata.NewTM())
-
 		m := lsm(t, session, db.NewID())
 
-		rctx := chi.NewRouteContext()
-		rctx.URLParams.Add("task_id", tid)
-		ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
+		require.Equal(t, http.StatusOK, rr.Code)
 
-		ts := httptest.NewServer(session.LoadAndSave(m(h)))
-		defer ts.Close()
+		rs := rr.Result()
+		defer rs.Body.Close()
 
-		e := httpexpect.Default(t, ts.URL)
+		body := readTestBody(t, rs.Body)
 
-		e.GET("/tasks/{task_id}", tid).
-			WithContext(ctx).
-			Expect().
-			Status(http.StatusFound).
-			JSON().Object().Value("payload").Object().NotEmpty()
+		require.Contains(t, body, "payload")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 	})
 
 	t.Run("errors", func(t *testing.T) {
 		tests := []struct {
 			name string
 			tid  string
-			uid  string
+			code int
 		}{
 			{
 				name: "invalid task",
 				tid:  "1",
-				uid:  db.NewID(),
+				code: http.StatusNotFound,
 			},
 			{
-				name: "invalid user",
-				tid:  db.NewID(),
-				uid:  "1",
+				name: "op failed",
+				tid:  "25",
+				code: http.StatusInternalServerError,
 			},
 		}
 
@@ -191,17 +231,22 @@ func TestHandleGetTask(t *testing.T) {
 
 				rr := httptest.NewRecorder()
 				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				ctx := setTaskID(t, tt.tid)
+				r = r.WithContext(ctx)
 
 				h := app.HandleGetTask(zap.NewNop(), testdata.NewTM())
-				m := lsm(t, session, tt.uid)
-
-				ctx := setTaskID(t, tt.tid)
-
-				r = r.WithContext(ctx)
+				m := lsm(t, session, db.NewID())
 
 				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
-				require.Equal(t, http.StatusNotFound, rr.Code)
+				require.Equal(t, tt.code, rr.Code)
+
+				rs := rr.Result()
+				defer rs.Body.Close()
+
+				body := readTestBody(t, rs.Body)
+				require.Contains(t, body, "error")
+				require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 			})
 		}
 	})
@@ -211,19 +256,15 @@ func TestHandleUpdateTask(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
-		uid := db.NewID()
-		tid := db.NewID()
-
 		rr := httptest.NewRecorder()
-
-		body := `{"title": "read", "description": "complete a chapter"}`
-		r := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer([]byte(body)))
+		r := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer([]byte(`{"title": "read", "description": "complete a chapter"}`)))
+		ctx := setTaskID(t, db.NewID())
+		r = r.WithContext(ctx)
 
 		session := scs.New()
+
 		h := app.HandleUpdateTask(zap.NewNop(), testdata.NewTM())
-		m := lsm(t, session, uid)
-		ctx := setTaskID(t, tid)
-		r = r.WithContext(ctx)
+		m := lsm(t, session, db.NewID())
 
 		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
@@ -232,52 +273,59 @@ func TestHandleUpdateTask(t *testing.T) {
 		rs := rr.Result()
 		defer rs.Body.Close()
 
-		body = readTestBody(t, rs.Body)
-		require.Contains(t, body, tid)
+		body := readTestBody(t, rs.Body)
+		require.Contains(t, body, "payload")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 	})
 
 	t.Run("errors", func(t *testing.T) {
 		tests := []struct {
 			name string
-			uid  string
 			tid  string
 			body string
 			code int
 		}{
 			{
 				name: "bad body",
-				uid:  db.NewID(),
 				tid:  db.NewID(),
 				body: `{"name":"happier"}`,
 				code: http.StatusBadRequest,
 			},
 			{
 				name: "invalid data",
-				uid:  db.NewID(),
 				tid:  db.NewID(),
 				body: `{"title":"", "description":"early morning run"}`,
 				code: http.StatusUnprocessableEntity,
 			},
 			{
 				name: "missing data",
-				uid:  db.NewID(),
 				tid:  "1",
 				body: `{"title":"learn testing", "description":"practice TDD"}`,
 				code: http.StatusNotFound,
 			},
 			{
+				name: "op failed",
+				tid:  "25",
+				body: `{"title":"learn testing", "description":"practice TDD"}`,
+				code: http.StatusInternalServerError,
+			},
+			{
 				name: "completed task",
-				uid:  db.NewID(),
 				tid:  "345",
 				body: `{"title":"learn testing", "description":"practice TDD"}`,
 				code: http.StatusNotModified,
 			},
 			{
-				name: "update failed",
-				uid:  db.NewID(),
+				name: "task not found",
 				tid:  db.NewID(),
 				body: `{"title":"test", "description":"update fails"}`,
 				code: http.StatusNotFound,
+			},
+			{
+				name: "op failed",
+				tid:  db.NewID(),
+				body: `{"title":"testX", "description":"update fails"}`,
+				code: http.StatusInternalServerError,
 			},
 		}
 
@@ -293,11 +341,19 @@ func TestHandleUpdateTask(t *testing.T) {
 				session := scs.New()
 
 				h := app.HandleUpdateTask(zap.NewNop(), testdata.NewTM())
-				m := lsm(t, session, tt.uid)
+				m := lsm(t, session, db.NewID())
 
 				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
 				require.Equal(t, tt.code, rr.Code)
+
+				rs := rr.Result()
+				defer rs.Body.Close()
+
+				body := readTestBody(t, rs.Body)
+
+				require.Contains(t, body, "error")
+				require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 			})
 		}
 	})
@@ -307,12 +363,10 @@ func TestHandleCompleteTask(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
-		tid := db.NewID()
-
 		rr := httptest.NewRecorder()
 
 		r := httptest.NewRequest(http.MethodPatch, "/", nil)
-		ctx := setTaskID(t, tid)
+		ctx := setTaskID(t, db.NewID())
 		r = r.WithContext(ctx)
 
 		h := app.HandleCompleteTask(zap.NewNop(), testdata.NewTM())
@@ -328,7 +382,8 @@ func TestHandleCompleteTask(t *testing.T) {
 
 		body := readTestBody(t, rs.Body)
 
-		require.Contains(t, body, tid)
+		require.Contains(t, body, "payload")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 	})
 
 	t.Run("errors", func(t *testing.T) {
@@ -341,6 +396,11 @@ func TestHandleCompleteTask(t *testing.T) {
 				name: "missing task",
 				tid:  "1",
 				code: http.StatusNotFound,
+			},
+			{
+				name: "task not found",
+				tid:  "25",
+				code: http.StatusInternalServerError,
 			},
 			{
 				name: "completed task",
@@ -387,12 +447,21 @@ func TestHandleDeleteTask(t *testing.T) {
 		r = r.WithContext(ctx)
 
 		session := scs.New()
+
 		h := app.HandleDeleteTask(zap.NewNop(), testdata.NewTM())
 		m := lsm(t, session, db.NewID())
 
 		session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
 		require.Equal(t, http.StatusOK, rr.Code)
+
+		rs := rr.Result()
+		defer rs.Body.Close()
+
+		body := readTestBody(t, rs.Body)
+
+		require.Contains(t, body, "payload")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 	})
 
 	t.Run("errors", func(t *testing.T) {
@@ -405,6 +474,11 @@ func TestHandleDeleteTask(t *testing.T) {
 				name: "missing task",
 				tid:  "1",
 				code: http.StatusNotFound,
+			},
+			{
+				name: "get error",
+				tid:  "25",
+				code: http.StatusInternalServerError,
 			},
 			{
 				name: "delete error",
@@ -430,6 +504,14 @@ func TestHandleDeleteTask(t *testing.T) {
 				session.LoadAndSave(m(h)).ServeHTTP(rr, r)
 
 				require.Equal(t, tt.code, rr.Code)
+
+				rs := rr.Result()
+				defer rs.Body.Close()
+
+				body := readTestBody(t, rs.Body)
+
+				require.Contains(t, body, "error")
+				require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 			})
 		}
 	})

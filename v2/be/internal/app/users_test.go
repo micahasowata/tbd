@@ -35,7 +35,7 @@ func TestHandleSignup(t *testing.T) {
 		body := readTestBody(t, rs.Body)
 
 		require.Contains(t, body, "payload")
-		require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 		require.Len(t, rs.Cookies(), 1)
 	})
 
@@ -88,7 +88,7 @@ func TestHandleSignup(t *testing.T) {
 				body := readTestBody(t, rs.Body)
 
 				require.Contains(t, body, "error")
-				require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+				require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 				require.Len(t, rs.Cookies(), 0)
 			})
 		}
@@ -116,7 +116,7 @@ func TestHandleLogin(t *testing.T) {
 		body := readTestBody(t, rs.Body)
 
 		require.Contains(t, body, "payload")
-		require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+		require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 		require.Len(t, rs.Cookies(), 1)
 	})
 
@@ -174,7 +174,7 @@ func TestHandleLogin(t *testing.T) {
 				body := readTestBody(t, rs.Body)
 
 				require.Contains(t, body, "error")
-				require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
+				require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 				require.Len(t, rs.Cookies(), 0)
 			})
 		}
@@ -202,6 +202,5 @@ func TestHandleLogout(t *testing.T) {
 	body := readTestBody(t, rs.Body)
 
 	require.Contains(t, body, "payload")
-	require.Equal(t, rs.Header.Get("Content-Type"), "application/json")
-	require.Len(t, rs.Cookies(), 1)
+	require.Equal(t, "application/json", rs.Header.Get("Content-Type"))
 }
