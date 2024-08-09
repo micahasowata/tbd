@@ -53,5 +53,9 @@ func (m *UM) Exists(ctx context.Context, id string) (bool, error) {
 		return false, nil
 	}
 
+	if id == "25" {
+		return false, models.ErrOpFailed
+	}
+
 	return true, nil
 }

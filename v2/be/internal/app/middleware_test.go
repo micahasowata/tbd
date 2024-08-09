@@ -53,14 +53,11 @@ func TestRequireAuthenticatedUser(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
-		rr := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/", nil)
-
 		sessions := scs.New()
 
-		ctx := setSession(t, sessions, r.Context(), db.NewID())
-
-		r = r.WithContext(ctx)
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r = r.WithContext(setSession(t, sessions, r.Context(), db.NewID()))
 
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("OK"))
@@ -84,14 +81,22 @@ func TestRequireAuthenticatedUser(t *testing.T) {
 		tests := []struct {
 			name string
 			id   string
+			code int
 		}{
 			{
 				name: "empty id",
 				id:   "",
+				code: http.StatusUnauthorized,
 			},
 			{
 				name: "invalid id",
 				id:   "1",
+				code: http.StatusUnauthorized,
+			},
+			{
+				name: "op failed",
+				id:   "25",
+				code: http.StatusInternalServerError,
 			},
 		}
 
@@ -116,7 +121,7 @@ func TestRequireAuthenticatedUser(t *testing.T) {
 
 				sessions.LoadAndSave(m(next)).ServeHTTP(rr, r)
 
-				require.Equal(t, http.StatusUnauthorized, rr.Code)
+				require.Equal(t, tt.code, rr.Code)
 
 				rs := rr.Result()
 				defer rs.Body.Close()

@@ -20,12 +20,20 @@ func (m *TM) Create(ctx context.Context, t *models.Task) error {
 		return models.ErrDuplicateTask
 	}
 
+	if t.Title == "testX" {
+		return models.ErrOpFailed
+	}
+
 	return nil
 }
 
 func (m *TM) All(ctx context.Context, userID string) ([]*models.Task, error) {
 	if userID == "1" {
 		return nil, nil
+	}
+
+	if userID == "25" {
+		return nil, models.ErrOpFailed
 	}
 
 	t := &models.Task{
@@ -42,6 +50,10 @@ func (m *TM) All(ctx context.Context, userID string) ([]*models.Task, error) {
 func (m *TM) GetByID(ctx context.Context, id, userID string) (*models.Task, error) {
 	if id == "1" || userID == "1" {
 		return nil, models.ErrRecordNotFound
+	}
+
+	if id == "25" {
+		return nil, models.ErrOpFailed
 	}
 
 	if id == "345" {
@@ -68,6 +80,10 @@ func (m *TM) GetByID(ctx context.Context, id, userID string) (*models.Task, erro
 func (m *TM) Update(ctx context.Context, t *models.Task) error {
 	if t.Title == "test" {
 		return models.ErrRecordNotFound
+	}
+
+	if t.Title == "testX" {
+		return models.ErrOpFailed
 	}
 
 	return nil
