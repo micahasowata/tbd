@@ -2,7 +2,6 @@ package app
 
 import (
 	"net/http"
-
 	"v2/be/internal/models"
 
 	"github.com/alexedwards/scs/v2"
@@ -27,8 +26,8 @@ func Routes(
 		r.Use(RequireAuthenticatedUser(logger, sessions, u))
 		r.Post("/logout", HandleLogout(logger, sessions))
 
-		r.Post("/create", HandleCreateTask(logger, t))
-		r.Get("/all", HandleListTasks(logger, t))
+		r.Post("/tasks/create", HandleCreateTask(logger, t))
+		r.Get("/tasks", HandleListTasks(logger, t))
 		r.Get("/tasks/{task_id}", HandleGetTask(logger, t))
 		r.Patch("/tasks/{task_id}/update", HandleUpdateTask(logger, t))
 		r.Patch("/tasks/{task_id}/complete", HandleCompleteTask(logger, t))
