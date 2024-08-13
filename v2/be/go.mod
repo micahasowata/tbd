@@ -8,12 +8,14 @@ require (
 	github.com/alexedwards/scs/v2 v2.8.0
 	github.com/brianvoe/gofakeit/v7 v7.0.4
 	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-chi/httprate v0.12.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pseidemann/finish v1.2.0
+	github.com/rs/cors v1.11.0
 	github.com/stretchr/testify v1.9.0
 	github.com/wagslane/go-password-validator v0.3.0
 	go.uber.org/zap v1.27.0
@@ -25,6 +27,7 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/cli v20.10.17+incompatible // indirect
